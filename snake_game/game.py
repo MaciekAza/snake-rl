@@ -6,6 +6,8 @@ RIGHT = "RIGHT"
 DOWN = "DOWN"
 LEFT = "LEFT"
 
+DIRECTIONS = [UP, RIGHT, DOWN, LEFT]
+
 MOVES = {
     UP: (0, -1),
     RIGHT: (1, 0),
@@ -113,6 +115,38 @@ class SnakeGame:
             "won": self.won,
             "reason": self.reason,
         }
+
+    def next_position(self, direction):
+        if direction not in MOVES:
+            direction = self.direction
+
+        move_x, move_y = MOVES[direction]
+        head_x, head_y = self.snake[0]
+
+        return head_x + move_x, head_y + move_y
+
+    def is_safe_direction(self, direction):
+        if direction == OPPOSITE[self.direction]:
+            return False
+
+        position = self.next_position(direction)
+
+        if self.is_wall_collision(position):
+            return False
+
+        ate_food = position == self.food
+        body = self.snake if ate_food else self.snake[:-1]
+
+        return position not in body
+
+    def safe_directions(self):
+        safe = []
+
+        for direction in DIRECTIONS:
+            if self.is_safe_direction(direction):
+                safe.append(direction)
+
+        return safe
 
     def render_text(self):
         board = []
