@@ -1,3 +1,6 @@
+import csv
+from pathlib import Path
+
 from agents.q_learning import QLearningAgent
 from rl.environment import SnakeRLEnvironment
 
@@ -5,6 +8,7 @@ from rl.environment import SnakeRLEnvironment
 EPISODES = 10000
 TEST_GAMES = 100
 Q_TABLE_FILE = "q_table.pkl"
+TRAINING_HISTORY_FILE = "results/q_learning_training.csv"
 
 
 def train():
@@ -14,22 +18,43 @@ def train():
     # Spróbuj wczytać wcześniej trenowaną Q-table
     agent.load(Q_TABLE_FILE)
 
-    for episode in range(EPISODES):
-        state = env.reset()
+    history_path = Path(TRAINING_HISTORY_FILE)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
 
-        while not env.game.game_over:
-            action = agent.choose_action(state)
-            next_state, reward, game_over = env.step(action)
-            agent.learn(state, action, reward, next_state, game_over)
-            state = next_state
+    with history_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["episode", "score", "steps", "epsilon", "q_table_size"],
+        )
+        writer.writeheader()
 
-        agent.lower_epsilon()
+        for episode in range(EPISODES):
+            state = env.reset()
 
-        if (episode + 1) % 500 == 0:
-            print(f"epizod {episode + 1}/{EPISODES}, epsilon {agent.epsilon:.4f}, Q-table size: {len(agent.q_table)}")
+            while not env.game.game_over:
+                action = agent.choose_action(state)
+                next_state, reward, game_over = env.step(action)
+                agent.learn(state, action, reward, next_state, game_over)
+                state = next_state
+
+            agent.lower_epsilon()
+
+            writer.writerow(
+                {
+                    "episode": episode + 1,
+                    "score": env.game.score,
+                    "steps": env.game.steps,
+                    "epsilon": f"{agent.epsilon:.6f}",
+                    "q_table_size": len(agent.q_table),
+                }
+            )
+
+            if (episode + 1) % 500 == 0:
+                print(f"epizod {episode + 1}/{EPISODES}, epsilon {agent.epsilon:.4f}, Q-table size: {len(agent.q_table)}")
 
     # Zapisz wytrenowaną Q-table
     agent.save(Q_TABLE_FILE)
+    print(f"Historia treningu zapisana do {TRAINING_HISTORY_FILE}")
     return agent
 
 

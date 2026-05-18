@@ -2,7 +2,7 @@ from agents.baseline import FoodAgent, RandomAgent, SafeRandomAgent
 from snake_game.game import SnakeGame
 
 
-def play_one_game(agent, width=20, height=12, max_steps=500):
+def play_one_game(agent, width=10, height=10, max_steps=500):
     game = SnakeGame(width=width, height=height)
 
     while not game.game_over and game.steps < max_steps:
