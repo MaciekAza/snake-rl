@@ -1,0 +1,126 @@
+import csv
+from pathlib import Path
+
+from agents.dqn import DQNAgent
+from rl.environment import ACTIONS, SnakeRLEnvironment
+
+
+WIDTH = 10
+HEIGHT = 10
+MAX_STEPS = 500
+EPISODES = 1500
+TEST_GAMES = 100
+DQN_MODEL_FILE = "dqn_model.pth"
+TRAINING_HISTORY_FILE = "results/dqn_training.csv"
+
+
+def train():
+    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
+    state_size = len(env.reset())
+    agent = DQNAgent(state_size=state_size, action_size=len(ACTIONS))
+
+    history_path = Path(TRAINING_HISTORY_FILE)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_history_path = history_path.with_suffix(".tmp.csv")
+
+    with temp_history_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["episode", "score", "steps", "epsilon", "memory_size", "avg_loss"],
+        )
+        writer.writeheader()
+
+        for episode in range(EPISODES):
+            state = env.reset()
+            losses = []
+
+            while not env.game.game_over:
+                action = agent.choose_action(state)
+                next_state, reward, game_over = env.step(action)
+                agent.remember(state, action, reward, next_state, game_over)
+                loss = agent.learn()
+
+                if loss is not None:
+                    losses.append(loss)
+
+                state = next_state
+
+            agent.lower_epsilon()
+
+            if (episode + 1) % 20 == 0:
+                agent.update_target_network()
+
+            avg_loss = sum(losses) / len(losses) if losses else 0
+            writer.writerow(
+                {
+                    "episode": episode + 1,
+                    "score": env.game.score,
+                    "steps": env.game.steps,
+                    "epsilon": f"{agent.epsilon:.6f}",
+                    "memory_size": len(agent.memory),
+                    "avg_loss": f"{avg_loss:.6f}",
+                }
+            )
+
+            if (episode + 1) % 100 == 0:
+                print(
+                    f"epizod {episode + 1}/{EPISODES}, "
+                    f"epsilon {agent.epsilon:.4f}, "
+                    f"memory {len(agent.memory)}"
+                )
+
+    temp_history_path.replace(history_path)
+    agent.save(DQN_MODEL_FILE)
+    print(f"Historia treningu zapisana do {TRAINING_HISTORY_FILE}")
+    return agent
+
+
+def test(agent):
+    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
+    old_epsilon = agent.epsilon
+    agent.epsilon = 0
+
+    scores = []
+    steps = []
+
+    for _ in range(TEST_GAMES):
+        state = env.reset()
+
+        while not env.game.game_over:
+            action = agent.choose_action(state)
+            state, reward, game_over = env.step(action)
+
+        scores.append(env.game.score)
+        steps.append(env.game.steps)
+
+    agent.epsilon = old_epsilon
+
+    avg_score = sum(scores) / len(scores)
+    avg_steps = sum(steps) / len(steps)
+
+    print()
+    print("=" * 50)
+    print("DQN test")
+    print("=" * 50)
+    print(f"  sredni wynik: {avg_score:.2f}")
+    print(f"  najlepszy wynik: {max(scores)}")
+    print(f"  najgorszy wynik: {min(scores)}")
+    print(f"  srednia liczba krokow: {avg_steps:.2f}")
+    print(f"  liczba testow: {TEST_GAMES}")
+    print("=" * 50)
+
+    return {
+        "avg_score": avg_score,
+        "best_score": max(scores),
+        "avg_steps": avg_steps,
+        "test_games": TEST_GAMES,
+    }
+
+
+def main():
+    agent = train()
+    test(agent)
+
+
+if __name__ == "__main__":
+    main()

@@ -9,14 +9,18 @@ EPISODES = 10000
 TEST_GAMES = 100
 Q_TABLE_FILE = "q_table.pkl"
 TRAINING_HISTORY_FILE = "results/q_learning_training.csv"
+RESET_Q_TABLE = True
 
 
 def train():
     env = SnakeRLEnvironment(width=10, height=10)
     agent = QLearningAgent()
     
-    # Spróbuj wczytać wcześniej trenowaną Q-table
-    agent.load(Q_TABLE_FILE)
+    if RESET_Q_TABLE:
+        print("Start od pustej Q-table")
+    else:
+        # Spróbuj wczytać wcześniej trenowaną Q-table
+        agent.load(Q_TABLE_FILE)
 
     history_path = Path(TRAINING_HISTORY_FILE)
     history_path.parent.mkdir(parents=True, exist_ok=True)

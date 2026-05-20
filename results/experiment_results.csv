@@ -1,0 +1,5 @@
+agent,avg_score,best_score,avg_steps,training_episodes,test_games,board,max_steps
+random,0.14,2,16.06,0,100,10x10,500
+food_heuristic,20.01,36,161.74,0,100,10x10,500
+Q-learning,14.71,29,137.83,10000,100,10x10,500
+DQN,19.22,38,152.90,1500,100,10x10,500
