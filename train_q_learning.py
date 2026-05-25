@@ -19,7 +19,6 @@ def train():
     if RESET_Q_TABLE:
         print("Start od pustej Q-table")
     else:
-        # Spróbuj wczytać wcześniej trenowaną Q-table
         agent.load(Q_TABLE_FILE)
 
     history_path = Path(TRAINING_HISTORY_FILE)
@@ -28,7 +27,7 @@ def train():
     with history_path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=["episode", "score", "steps", "epsilon", "q_table_size"],
+            fieldnames=["epizod", "wynik", "kroki", "epsilon", "rozmiar_tablicy_q"],
         )
         writer.writeheader()
 
@@ -45,18 +44,17 @@ def train():
 
             writer.writerow(
                 {
-                    "episode": episode + 1,
-                    "score": env.game.score,
-                    "steps": env.game.steps,
+                    "epizod": episode + 1,
+                    "wynik": env.game.score,
+                    "kroki": env.game.steps,
                     "epsilon": f"{agent.epsilon:.6f}",
-                    "q_table_size": len(agent.q_table),
+                    "rozmiar_tablicy_q": len(agent.q_table),
                 }
             )
 
             if (episode + 1) % 500 == 0:
-                print(f"epizod {episode + 1}/{EPISODES}, epsilon {agent.epsilon:.4f}, Q-table size: {len(agent.q_table)}")
+                print(f"epizod {episode + 1}/{EPISODES}, epsilon {agent.epsilon:.4f}, rozmiar tablicy Q: {len(agent.q_table)}")
 
-    # Zapisz wytrenowaną Q-table
     agent.save(Q_TABLE_FILE)
     print(f"Historia treningu zapisana do {TRAINING_HISTORY_FILE}")
     return agent
@@ -87,7 +85,7 @@ def test(agent):
     
     print()
     print("=" * 50)
-    print("Q-learning test")
+    print("Test Q-learning")
     print("=" * 50)
     print(f"  średni wynik: {avg_score:.2f}")
     print(f"  najlepszy wynik: {max(scores)}")

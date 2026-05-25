@@ -12,7 +12,7 @@ class QLearningAgent:
         self.discount = 0.9
         self.epsilon = 1.0
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.9995  # Spowolniony decay
+        self.epsilon_decay = 0.9995
 
     def choose_action(self, state):
         if random.random() < self.epsilon:
@@ -62,16 +62,14 @@ class QLearningAgent:
             self.epsilon = self.epsilon_min
 
     def save(self, filename="q_table.pkl"):
-        """Zapisz Q-table do pliku"""
         with open(filename, 'wb') as f:
             pickle.dump(self.q_table, f)
-        print(f"Q-table zapisana do {filename}")
+        print(f"Tablica Q zapisana do {filename}")
 
     def load(self, filename="q_table.pkl"):
-        """Wczytaj Q-table z pliku"""
         if os.path.exists(filename):
             with open(filename, 'rb') as f:
                 self.q_table = pickle.load(f)
-            print(f"Q-table wczytana z {filename}")
+            print(f"Tablica Q wczytana z {filename}")
             return True
         return False

@@ -97,14 +97,14 @@ class DQNAgent:
             },
             filename,
         )
-        print(f"DQN model zapisany do {filename}")
+        print(f"Model DQN zapisany do {filename}")
 
     def load(self, filename="dqn_model.pth"):
         checkpoint = torch.load(filename, map_location=self.device)
         self.model.load_state_dict(checkpoint["model"])
         self.target_model.load_state_dict(checkpoint["target_model"])
         self.epsilon = checkpoint.get("epsilon", self.epsilon)
-        print(f"DQN model wczytany z {filename}")
+        print(f"Model DQN wczytany z {filename}")
 
     def _state_tensor(self, states):
         return torch.tensor(states, dtype=torch.float32, device=self.device)

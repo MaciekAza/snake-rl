@@ -5,7 +5,7 @@ from snake_game.game import DIRECTIONS
 
 class RandomAgent:
     def __init__(self):
-        self.name = "random"
+        self.name = "losowy"
 
     def choose_direction(self, game):
         return random.choice(DIRECTIONS)
@@ -13,7 +13,7 @@ class RandomAgent:
 
 class SafeRandomAgent:
     def __init__(self):
-        self.name = "safe_random"
+        self.name = "bezpieczny_losowy"
 
     def choose_direction(self, game):
         safe = game.safe_directions()
@@ -26,7 +26,7 @@ class SafeRandomAgent:
 
 class FoodAgent:
     def __init__(self):
-        self.name = "food_heuristic"
+        self.name = "heurystyka_jedzenia"
 
     def choose_direction(self, game):
         safe = game.safe_directions()

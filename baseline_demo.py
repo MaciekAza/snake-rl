@@ -26,9 +26,9 @@ def test_agent(agent, games=100):
     average_steps = sum(steps) / len(steps)
 
     print(agent.name)
-    print(f"  sredni wynik: {average_score:.2f}")
+    print(f"  średni wynik: {average_score:.2f}")
     print(f"  najlepszy wynik: {best_score}")
-    print(f"  srednia liczba krokow: {average_steps:.2f}")
+    print(f"  średnia liczba kroków: {average_steps:.2f}")
     print()
 
 

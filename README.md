@@ -10,7 +10,7 @@ Gra manualna:
 python main.py
 ```
 
-Baseline:
+Agenci bazowi:
 
 ```bash
 python baseline_demo.py
@@ -40,7 +40,7 @@ Dodany jest pierwszy algorytm RL:
 
 - tablica Q,
 - epsilon-greedy,
-- trening przez 10000 epizodow,
+- trening przez 10000 epizodów,
 - trening od pustej Q-table,
 - zapis Q-table do `q_table.pkl`,
 - zapis historii treningu do `results/q_learning_training.csv`.
@@ -50,32 +50,45 @@ Dodany jest pierwszy algorytm RL:
 Dodany jest prosty Deep Q-Network:
 
 - PyTorch,
-- siec neuronowa,
+- sieć neuronowa,
 - replay memory,
 - target network,
 - epsilon-greedy,
-- trening przez 1500 epizodow,
+- trening przez 3000 epizodów,
 - zapis modelu do `dqn_model.pth`,
 - zapis historii treningu do `results/dqn_training.csv`.
 
+## Nagrody
+
+Środowisko karze agenta za ryzykowne ruchy:
+
+- jedzenie: `+10`,
+- kolizja ze ścianą: `-30`,
+- kolizja z ciałem: `-30`,
+- limit kroków: `-15`,
+- ruch w stronę jedzenia: mały bonus,
+- ruch od jedzenia: mała kara,
+- bliskość ciała/ściany: stopniowa kara,
+- wejście w ciasny obszar: dodatkowa kara.
+
 ## Proste wyniki
 
-Ustawienia: plansza `10x10`, limit `500` krokow, test `100` gier.
+Ustawienia: plansza `10x10`, limit `500` kroków, test `100` gier.
 
-| Agent | Sredni wynik | Najlepszy wynik | Srednia liczba krokow | Epizody treningu |
+| Agent | Średni wynik | Najlepszy wynik | Średnia liczba kroków | Epizody treningu |
 | --- | ---: | ---: | ---: | ---: |
-| random | 0.14 | 2 | 16.06 | 0 |
-| food_heuristic | 20.01 | 36 | 161.74 | 0 |
-| Q-learning | 14.71 | 29 | 137.83 | 10000 |
-| DQN | 19.22 | 38 | 152.90 | 1500 |
+| losowy | 0.12 | 2 | 15.99 | 0 |
+| heurystyka_jedzenia | 20.14 | 38 | 164.05 | 0 |
+| Q-learning | 14.67 | 30 | 116.22 | 10000 |
+| DQN | 17.38 | 34 | 143.42 | 3000 |
 
-Wyniki eksperymentow sa w pliku:
+Wyniki eksperymentów są w pliku:
 
 ```text
 results/experiment_results.csv
 ```
 
-Historie treningu sa w plikach:
+Historie treningu są w plikach:
 
 ```text
 results/q_learning_training.csv

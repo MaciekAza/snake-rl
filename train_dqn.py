@@ -8,7 +8,7 @@ from rl.environment import ACTIONS, SnakeRLEnvironment
 WIDTH = 10
 HEIGHT = 10
 MAX_STEPS = 500
-EPISODES = 1500
+EPISODES = 3000
 TEST_GAMES = 100
 DQN_MODEL_FILE = "dqn_model.pth"
 TRAINING_HISTORY_FILE = "results/dqn_training.csv"
@@ -26,7 +26,7 @@ def train():
     with temp_history_path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=["episode", "score", "steps", "epsilon", "memory_size", "avg_loss"],
+            fieldnames=["epizod", "wynik", "kroki", "epsilon", "rozmiar_pamięci", "średnia_strata"],
         )
         writer.writeheader()
 
@@ -53,12 +53,12 @@ def train():
             avg_loss = sum(losses) / len(losses) if losses else 0
             writer.writerow(
                 {
-                    "episode": episode + 1,
-                    "score": env.game.score,
-                    "steps": env.game.steps,
+                    "epizod": episode + 1,
+                    "wynik": env.game.score,
+                    "kroki": env.game.steps,
                     "epsilon": f"{agent.epsilon:.6f}",
-                    "memory_size": len(agent.memory),
-                    "avg_loss": f"{avg_loss:.6f}",
+                    "rozmiar_pamięci": len(agent.memory),
+                    "średnia_strata": f"{avg_loss:.6f}",
                 }
             )
 
@@ -66,7 +66,7 @@ def train():
                 print(
                     f"epizod {episode + 1}/{EPISODES}, "
                     f"epsilon {agent.epsilon:.4f}, "
-                    f"memory {len(agent.memory)}"
+                    f"pamięć {len(agent.memory)}"
                 )
 
     temp_history_path.replace(history_path)
@@ -100,13 +100,13 @@ def test(agent):
 
     print()
     print("=" * 50)
-    print("DQN test")
+    print("Test DQN")
     print("=" * 50)
-    print(f"  sredni wynik: {avg_score:.2f}")
+    print(f"  średni wynik: {avg_score:.2f}")
     print(f"  najlepszy wynik: {max(scores)}")
     print(f"  najgorszy wynik: {min(scores)}")
-    print(f"  srednia liczba krokow: {avg_steps:.2f}")
-    print(f"  liczba testow: {TEST_GAMES}")
+    print(f"  średnia liczba kroków: {avg_steps:.2f}")
+    print(f"  liczba testów: {TEST_GAMES}")
     print("=" * 50)
 
     return {

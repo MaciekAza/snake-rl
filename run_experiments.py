@@ -63,13 +63,13 @@ def evaluate_rl_agent(name, agent, training_episodes):
 def make_result(name, scores, steps, training_episodes):
     return {
         "agent": name,
-        "avg_score": f"{sum(scores) / len(scores):.2f}",
-        "best_score": max(scores),
-        "avg_steps": f"{sum(steps) / len(steps):.2f}",
-        "training_episodes": training_episodes,
-        "test_games": TEST_GAMES,
-        "board": f"{WIDTH}x{HEIGHT}",
-        "max_steps": MAX_STEPS,
+        "średni_wynik": f"{sum(scores) / len(scores):.2f}",
+        "najlepszy_wynik": max(scores),
+        "średnie_kroki": f"{sum(steps) / len(steps):.2f}",
+        "epizody_treningu": training_episodes,
+        "liczba_testów": TEST_GAMES,
+        "plansza": f"{WIDTH}x{HEIGHT}",
+        "limit_kroków": MAX_STEPS,
     }
 
 
@@ -96,13 +96,13 @@ def save_results(results):
             file,
             fieldnames=[
                 "agent",
-                "avg_score",
-                "best_score",
-                "avg_steps",
-                "training_episodes",
-                "test_games",
-                "board",
-                "max_steps",
+                "średni_wynik",
+                "najlepszy_wynik",
+                "średnie_kroki",
+                "epizody_treningu",
+                "liczba_testów",
+                "plansza",
+                "limit_kroków",
             ],
         )
         writer.writeheader()
@@ -124,10 +124,10 @@ def main():
     for result in results:
         print(
             f"{result['agent']}: "
-            f"sredni wynik {result['avg_score']}, "
-            f"najlepszy {result['best_score']}, "
-            f"srednie kroki {result['avg_steps']}, "
-            f"epizody treningu {result['training_episodes']}"
+            f"średni wynik {result['średni_wynik']}, "
+            f"najlepszy {result['najlepszy_wynik']}, "
+            f"średnie kroki {result['średnie_kroki']}, "
+            f"epizody treningu {result['epizody_treningu']}"
         )
 
 
