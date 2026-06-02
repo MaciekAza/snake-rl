@@ -1,20 +1,26 @@
 import csv
 from pathlib import Path
 
+import torch
+
 from agents.dqn import DQNAgent
+from project_paths import DQN_HISTORY_FILE, DQN_MODEL_FILE
 from rl.environment import ACTIONS, SnakeRLEnvironment
 
 
 WIDTH = 10
 HEIGHT = 10
-MAX_STEPS = 500
-EPISODES = 3000
+MAX_STEPS = 1000
+EPISODES = 1500
 TEST_GAMES = 100
-DQN_MODEL_FILE = "dqn_model.pth"
-TRAINING_HISTORY_FILE = "results/dqn_training.csv"
+LEARN_EVERY_STEPS = 4
+TARGET_UPDATE_EVERY_EPISODES = 20
+TRAINING_HISTORY_FILE = DQN_HISTORY_FILE
 
 
 def train():
+    torch.set_num_threads(1)
+
     env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
     state_size = len(env.reset())
     agent = DQNAgent(state_size=state_size, action_size=len(ACTIONS))
@@ -33,12 +39,17 @@ def train():
         for episode in range(EPISODES):
             state = env.reset()
             losses = []
+            step_counter = 0
 
             while not env.game.game_over:
                 action = agent.choose_action(state)
                 next_state, reward, game_over = env.step(action)
                 agent.remember(state, action, reward, next_state, game_over)
-                loss = agent.learn()
+                step_counter += 1
+                loss = None
+
+                if step_counter % LEARN_EVERY_STEPS == 0:
+                    loss = agent.learn()
 
                 if loss is not None:
                     losses.append(loss)
@@ -47,7 +58,7 @@ def train():
 
             agent.lower_epsilon()
 
-            if (episode + 1) % 20 == 0:
+            if (episode + 1) % TARGET_UPDATE_EVERY_EPISODES == 0:
                 agent.update_target_network()
 
             avg_loss = sum(losses) / len(losses) if losses else 0
@@ -63,6 +74,7 @@ def train():
             )
 
             if (episode + 1) % 100 == 0:
+                file.flush()
                 print(
                     f"epizod {episode + 1}/{EPISODES}, "
                     f"epsilon {agent.epsilon:.4f}, "

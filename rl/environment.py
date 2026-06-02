@@ -14,12 +14,13 @@ class SnakeRLEnvironment:
         self,
         width=10,
         height=10,
-        max_steps=500,
+        max_steps=1000,
         body_collision_penalty=-30.0,
         wall_collision_penalty=-30.0,
         step_limit_penalty=-15.0,
+        seed=None,
     ):
-        self.game = SnakeGame(width=width, height=height)
+        self.game = SnakeGame(width=width, height=height, seed=seed)
         self.max_steps = max_steps
         self.last_food_distance = 0
         self.steps_without_food = 0

@@ -4,6 +4,7 @@ from collections import deque
 import torch
 from torch import nn
 
+from project_paths import DQN_MODEL_FILE
 from rl.environment import ACTIONS
 
 
@@ -88,7 +89,7 @@ class DQNAgent:
     def update_target_network(self):
         self.target_model.load_state_dict(self.model.state_dict())
 
-    def save(self, filename="dqn_model.pth"):
+    def save(self, filename=DQN_MODEL_FILE):
         torch.save(
             {
                 "model": self.model.state_dict(),
@@ -99,7 +100,7 @@ class DQNAgent:
         )
         print(f"Model DQN zapisany do {filename}")
 
-    def load(self, filename="dqn_model.pth"):
+    def load(self, filename=DQN_MODEL_FILE):
         checkpoint = torch.load(filename, map_location=self.device)
         self.model.load_state_dict(checkpoint["model"])
         self.target_model.load_state_dict(checkpoint["target_model"])

@@ -28,6 +28,12 @@ DQN:
 python train_dqn.py
 ```
 
+NEAT:
+
+```bash
+python train_neat.py
+```
+
 Eksperymenty:
 
 ```bash
@@ -54,9 +60,22 @@ Dodany jest prosty Deep Q-Network:
 - replay memory,
 - target network,
 - epsilon-greedy,
-- trening przez 3000 epizodów,
+- trening przez 1500 epizodów,
 - zapis modelu do `dqn_model.pth`,
 - zapis historii treningu do `results/dqn_training.csv`.
+
+## NEAT
+
+Dodana jest neuroewolucja:
+
+- biblioteka `neat-python`,
+- sieć neuronowa tworzona przez ewolucję,
+- populacja genomów,
+- selekcja najlepszego osobnika,
+- osobna funkcja sprawności z karą za stagnację i pętle,
+- trening przez 35 pokoleń,
+- zapis najlepszego genomu do `neat_winner.pkl`,
+- zapis historii treningu do `results/neat_training.csv`.
 
 ## Nagrody
 
@@ -73,14 +92,15 @@ Dodany jest prosty Deep Q-Network:
 
 ## Proste wyniki
 
-Ustawienia: plansza `10x10`, limit `500` kroków, test `100` gier.
+Ustawienia: plansza `10x10`, limit `1000` kroków, test `100` gier.
 
 | Agent | Średni wynik | Najlepszy wynik | Średnia liczba kroków | Epizody treningu |
 | --- | ---: | ---: | ---: | ---: |
-| losowy | 0.12 | 2 | 15.99 | 0 |
-| heurystyka_jedzenia | 20.14 | 38 | 164.05 | 0 |
-| Q-learning | 14.67 | 30 | 116.22 | 10000 |
-| DQN | 17.38 | 34 | 143.42 | 3000 |
+| losowy | 0.13 | 1 | 13.21 | 0 |
+| heurystyka_jedzenia | 19.50 | 36 | 157.35 | 0 |
+| Q-learning | 14.61 | 27 | 116.49 | 10000 |
+| DQN | 17.82 | 31 | 143.32 | 1500 |
+| NEAT | 24.70 | 37 | 577.77 | 35 pokoleń |
 
 Wyniki eksperymentów są w pliku:
 
@@ -93,4 +113,15 @@ Historie treningu są w plikach:
 ```text
 results/q_learning_training.csv
 results/dqn_training.csv
+results/neat_training.csv
 ```
+
+Aktualne modele używane przez skrypty:
+
+```text
+q_table.pkl
+dqn_model.pth
+neat_winner.pkl
+```
+
+Wspólne ścieżki do tych plików są w `project_paths.py`.

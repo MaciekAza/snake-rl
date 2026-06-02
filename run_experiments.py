@@ -1,9 +1,11 @@
 import csv
+import importlib.util
 from pathlib import Path
 
 from agents.baseline import FoodAgent, RandomAgent
 from agents.dqn import DQNAgent
 from agents.q_learning import QLearningAgent
+from project_paths import EXPERIMENT_RESULTS_FILE, NEAT_CONFIG_FILE, NEAT_HISTORY_FILE, NEAT_MODEL_FILE
 from rl.environment import ACTIONS, SnakeRLEnvironment
 from snake_game.game import SnakeGame
 from train_dqn import DQN_MODEL_FILE, EPISODES as DQN_EPISODES
@@ -12,9 +14,10 @@ from train_q_learning import EPISODES as Q_LEARNING_EPISODES, Q_TABLE_FILE
 
 WIDTH = 10
 HEIGHT = 10
-MAX_STEPS = 500
+MAX_STEPS = 1000
 TEST_GAMES = 100
-RESULTS_FILE = "results/experiment_results.csv"
+RESULTS_FILE = EXPERIMENT_RESULTS_FILE
+MAX_NEAT_GENERATIONS = 35
 
 
 def evaluate_baseline(agent, training_episodes):
@@ -48,7 +51,10 @@ def evaluate_rl_agent(name, agent, training_episodes):
         state = env.reset()
 
         while not env.game.game_over:
-            action = agent.choose_action(state)
+            if hasattr(agent, "choose_action_from_env"):
+                action = agent.choose_action_from_env(env)
+            else:
+                action = agent.choose_action(state)
             state, reward, game_over = env.step(action)
 
         scores.append(env.game.score)
@@ -87,6 +93,47 @@ def load_dqn_agent():
     return agent
 
 
+def load_neat_agent():
+    if importlib.util.find_spec("neat") is None:
+        print("Nie znaleziono biblioteki neat-python. Uruchom: pip install -r requirements.txt")
+        return None
+
+    if not Path(NEAT_MODEL_FILE).exists():
+        print("Nie znaleziono modelu NEAT. Najpierw uruchom: python train_neat.py")
+        return None
+
+    if not Path(NEAT_CONFIG_FILE).exists():
+        print("Nie znaleziono konfiguracji NEAT.")
+        return None
+
+    from agents.neat_agent import NEATAgent
+
+    return NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
+
+
+def get_neat_training_generations():
+    path = Path(NEAT_HISTORY_FILE)
+
+    if not path.exists():
+        return MAX_NEAT_GENERATIONS
+
+    last_row = None
+
+    with path.open("r", newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+
+        for row in reader:
+            last_row = row
+
+    if last_row is None:
+        return MAX_NEAT_GENERATIONS
+
+    try:
+        return int(last_row["pokolenie"])
+    except (KeyError, ValueError):
+        return MAX_NEAT_GENERATIONS
+
+
 def save_results(results):
     path = Path(RESULTS_FILE)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,6 +165,11 @@ def main():
         evaluate_rl_agent("Q-learning", load_q_learning_agent(), Q_LEARNING_EPISODES),
         evaluate_rl_agent("DQN", load_dqn_agent(), DQN_EPISODES),
     ]
+
+    neat_agent = load_neat_agent()
+
+    if neat_agent is not None:
+        results.append(evaluate_rl_agent("NEAT", neat_agent, get_neat_training_generations()))
 
     save_results(results)
 

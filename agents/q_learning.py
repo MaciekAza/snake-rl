@@ -2,6 +2,7 @@ import random
 import pickle
 import os
 
+from project_paths import Q_TABLE_FILE
 from rl.environment import ACTIONS
 
 
@@ -61,12 +62,12 @@ class QLearningAgent:
         if self.epsilon < self.epsilon_min:
             self.epsilon = self.epsilon_min
 
-    def save(self, filename="q_table.pkl"):
+    def save(self, filename=Q_TABLE_FILE):
         with open(filename, 'wb') as f:
             pickle.dump(self.q_table, f)
         print(f"Tablica Q zapisana do {filename}")
 
-    def load(self, filename="q_table.pkl"):
+    def load(self, filename=Q_TABLE_FILE):
         if os.path.exists(filename):
             with open(filename, 'rb') as f:
                 self.q_table = pickle.load(f)

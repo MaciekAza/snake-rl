@@ -1,15 +1,18 @@
 import argparse
-import sys
 import os
+import sys
+from pathlib import Path
+
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import pygame
 import pickle
-import glob
 
 from snake_game.game import SnakeGame
 from rl.environment import SnakeRLEnvironment, ACTIONS
 from agents.baseline import FoodAgent, RandomAgent
 from agents.q_learning import QLearningAgent
+from project_paths import DQN_MODEL_FILE, NEAT_CONFIG_FILE, NEAT_MODEL_FILE, PROJECT_DIR, Q_TABLE_FILE
 
 
 DISPLAY_NAMES = {
@@ -22,12 +25,34 @@ DISPLAY_NAMES = {
     "q-learninfg": "Q-LEARNING",
     "dqn": "DQN",
     "dnn": "DQN",
+    "neat": "NEAT",
+    "neuroevolution": "NEAT",
+    "neuro-ewolucja": "NEAT",
     "random": "LOSOWY",
     "DQNAgent": "DQN",
+    "NEATAgent": "NEAT",
     "QLearningAgent": "Q-LEARNING",
     "FoodAgent": "HEURYSTYKA",
     "RandomAgent": "LOSOWY",
 }
+
+
+def resolve_existing_path(filename):
+    if filename is None:
+        return None
+
+    path = Path(filename)
+
+    if path.is_absolute():
+        return str(path) if path.exists() else None
+
+    for base in (Path.cwd(), PROJECT_DIR):
+        candidate = base / path
+
+        if candidate.exists():
+            return str(candidate)
+
+    return None
 
 
 class Slot:
@@ -46,17 +71,36 @@ class Slot:
 
         self._create()
 
+    def _use_random_agent(self):
+        self.game = SnakeGame(width=self.width, height=self.height)
+        self.agent = RandomAgent()
+        self.is_rl = False
+
     def _create(self):
         kind = self.kind.lower()
 
         if kind in ("qlearning", "q", "q-learn", "q-learninfg"):
             self.env = SnakeRLEnvironment(width=self.width, height=self.height, max_steps=self.max_steps)
-            state = self.env.reset()
+            self.env.reset()
             agent = QLearningAgent()
-            try:
-                agent.load(self.agent_filename or "q_table.pkl")
-            except Exception:
-                pass
+            filename = resolve_existing_path(self.agent_filename or Q_TABLE_FILE)
+
+            if filename is not None:
+                try:
+                    loaded = agent.load(filename)
+                    if not loaded:
+                        print(f"Nie udało się wczytać tablicy Q z {filename}. Używam agenta losowego.", file=sys.stderr)
+                        self._use_random_agent()
+                        return
+                except Exception as error:
+                    print(f"Nie udało się wczytać tablicy Q z {filename}: {error}", file=sys.stderr)
+                    self._use_random_agent()
+                    return
+            else:
+                print("Nie znaleziono tablicy Q dla planszy Q-learning. Używam agenta losowego.", file=sys.stderr)
+                self._use_random_agent()
+                return
+
             agent.epsilon = 0
             self.agent = agent
             self.game = self.env.game
@@ -67,9 +111,16 @@ class Slot:
             state = self.env.reset()
             state_size = len(state)
             try:
-                if self.agent_filename and self.agent_filename.lower().endswith((".pkl", ".pickle")):
+                filename = resolve_existing_path(self.agent_filename or DQN_MODEL_FILE)
+
+                if filename is None:
+                    print("Nie znaleziono modelu DQN dla planszy DQN. Używam agenta losowego.", file=sys.stderr)
+                    self._use_random_agent()
+                    return
+
+                if filename and filename.lower().endswith((".pkl", ".pickle")):
                     try:
-                        with open(self.agent_filename, "rb") as f:
+                        with open(filename, "rb") as f:
                             obj = pickle.load(f)
 
                         if hasattr(obj, "choose_action"):
@@ -83,35 +134,74 @@ class Slot:
 
                             agent = _DQNAgent(state_size=state_size, action_size=len(ACTIONS))
                             try:
-                                agent.load(self.agent_filename)
-                            except Exception:
-                                pass
+                                agent.load(filename)
+                            except Exception as error:
+                                print(f"Nie udało się wczytać modelu DQN z {filename}: {error}", file=sys.stderr)
+                                self._use_random_agent()
+                                return
                             agent.epsilon = 0
                             self.agent = agent
 
-                    except Exception:
+                    except Exception as error:
+                        print(f"Nie udało się wczytać pliku pickle DQN z {filename}: {error}", file=sys.stderr)
                         from agents.dqn import DQNAgent as _DQNAgent
 
                         agent = _DQNAgent(state_size=state_size, action_size=len(ACTIONS))
                         try:
-                            agent.load(self.agent_filename or "dqn_model.pth")
-                        except Exception:
-                            pass
+                            agent.load(filename)
+                        except Exception as load_error:
+                            print(f"Nie udało się wczytać modelu DQN z {filename}: {load_error}", file=sys.stderr)
+                            self._use_random_agent()
+                            return
                         agent.epsilon = 0
                         self.agent = agent
                 else:
                     from agents.dqn import DQNAgent as _DQNAgent
 
                     agent = _DQNAgent(state_size=state_size, action_size=len(ACTIONS))
-                    try:
-                        agent.load(self.agent_filename or "dqn_model.pth")
-                    except Exception:
-                        pass
+
+                    if filename is not None:
+                        try:
+                            agent.load(filename)
+                        except Exception as error:
+                            print(f"Nie udało się wczytać modelu DQN z {filename}: {error}", file=sys.stderr)
+                            self._use_random_agent()
+                            return
+
                     agent.epsilon = 0
                     self.agent = agent
             except Exception:
                 print("Ostrzeżenie: DQNAgent jest niedostępny, prawdopodobnie brakuje torch. Używam agenta losowego.", file=sys.stderr)
-                self.agent = RandomAgent()
+                self._use_random_agent()
+                return
+
+            self.game = self.env.game
+            self.is_rl = True
+
+        elif kind in ("neat", "neuroevolution", "neuro-ewolucja"):
+            self.env = SnakeRLEnvironment(width=self.width, height=self.height, max_steps=self.max_steps)
+            self.env.reset()
+            filename = resolve_existing_path(self.agent_filename or NEAT_MODEL_FILE)
+            config_file = resolve_existing_path(NEAT_CONFIG_FILE)
+
+            if filename is None:
+                print("Nie znaleziono modelu NEAT dla planszy NEAT. Używam agenta losowego.", file=sys.stderr)
+                self._use_random_agent()
+                return
+
+            if config_file is None:
+                print("Nie znaleziono konfiguracji NEAT. Używam agenta losowego.", file=sys.stderr)
+                self._use_random_agent()
+                return
+
+            try:
+                from agents.neat_agent import NEATAgent
+
+                self.agent = NEATAgent.load(filename, config_file)
+            except Exception as error:
+                print(f"Nie udało się wczytać modelu NEAT z {filename}: {error}", file=sys.stderr)
+                self._use_random_agent()
+                return
 
             self.game = self.env.game
             self.is_rl = True
@@ -122,9 +212,7 @@ class Slot:
             self.is_rl = False
 
         else:
-            self.game = SnakeGame(width=self.width, height=self.height)
-            self.agent = RandomAgent()
-            self.is_rl = False
+            self._use_random_agent()
 
     def reset(self):
         if self.is_rl and self.env is not None:
@@ -145,7 +233,10 @@ class Slot:
 
         if self.is_rl:
             state = self.env.get_state()
-            action = self.agent.choose_action(state)
+            if hasattr(self.agent, "choose_action_from_env"):
+                action = self.agent.choose_action_from_env(self.env)
+            else:
+                action = self.agent.choose_action(state)
             self.env.step(action)
             self.game = self.env.game
         else:
@@ -177,24 +268,25 @@ def parse_layout(layout_str, total):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Wyświetla kilka gier Snake w jednej siatce")
+    parser = argparse.ArgumentParser(description="Wyświetla kilka gier Snake w jednej siatce", add_help=False)
+    parser.add_argument("-h", "--help", action="help", help="pokaż tę pomoc i zakończ")
     parser.add_argument("--rows", type=int, default=1)
-    parser.add_argument("--cols", type=int, default=3)
+    parser.add_argument("--cols", type=int, default=4)
     parser.add_argument("--cell-w", type=int, default=10, help="szerokość planszy w polach")
     parser.add_argument("--cell-h", type=int, default=10, help="wysokość planszy w polach")
     parser.add_argument("--cell-size", type=int, default=40, help="liczba pikseli na jedno pole")
     parser.add_argument("--margin", type=int, default=12, help="odstęp w pikselach między planszami")
     parser.add_argument("--fps", type=int, default=6)
-    parser.add_argument("--layout", type=str, default="food:1,qlearning:1,dqn:1",
-                        help="lista typ:liczba po przecinkach, np. food:1,qlearning:1,dqn:1")
+    parser.add_argument("--layout", type=str, default="food:1,qlearning:1,dqn:1,neat:1",
+                        help="lista typ:liczba po przecinkach, np. food:1,qlearning:1,dqn:1,neat:1")
     parser.add_argument("--dqn-file", type=str, default=None, help="ścieżka do pliku modelu DQN (.pth)")
     parser.add_argument("--qtable-file", type=str, default=None, help="ścieżka do pliku tablicy Q-learning (.pkl)")
-    parser.add_argument("--max-steps", type=int, default=500)
+    parser.add_argument("--neat-file", type=str, default=None, help="ścieżka do pliku modelu NEAT (.pkl)")
+    parser.add_argument("--max-steps", type=int, default=1000)
     args = parser.parse_args()
 
     rows = args.rows
     cols = args.cols
-    total = rows * cols
     cell_w = args.cell_w
     cell_h = args.cell_h
     cell_size = args.cell_size
@@ -203,24 +295,20 @@ def main():
 
     dqn_file = args.dqn_file
     qtable_file = args.qtable_file
+    neat_file = args.neat_file
 
-    if not dqn_file:
-        pkl_candidates = glob.glob("*dqn*.pkl") + glob.glob("*dqn*.pickle")
-        if pkl_candidates:
-            dqn_file = pkl_candidates[0]
-        else:
-            for candidate in ("dqn_model.pth", "dqn_modelt.pth", "dqn_model.pt", "dqn.pkl", "dqn_model.pkl"):
-                if os.path.exists(candidate):
-                    dqn_file = candidate
-                    break
+    dqn_file = resolve_existing_path(dqn_file)
+    qtable_file = resolve_existing_path(qtable_file)
+    neat_file = resolve_existing_path(neat_file)
 
     if not qtable_file:
-        if os.path.exists("q_table.pkl"):
-            qtable_file = "q_table.pkl"
-        else:
-            q_candidates = glob.glob("*q_table*.pkl") + glob.glob("*qlearning*.pkl") + glob.glob("*q_learning*.pkl") + glob.glob("*qlearn*.pkl")
-            if q_candidates:
-                qtable_file = q_candidates[0]
+        qtable_file = resolve_existing_path(Q_TABLE_FILE)
+
+    if not dqn_file:
+        dqn_file = resolve_existing_path(DQN_MODEL_FILE)
+
+    if not neat_file:
+        neat_file = resolve_existing_path(NEAT_MODEL_FILE)
 
     if dqn_file:
         print(f"Automatycznie wykryto model DQN: {dqn_file}")
@@ -232,7 +320,12 @@ def main():
     else:
         print("Nie znaleziono tablicy Q. Plansze Q-learning będą działały losowo.")
 
-    agents_kinds = parse_layout(args.layout, total)
+    if neat_file:
+        print(f"Automatycznie wykryto model NEAT: {neat_file}")
+    else:
+        print("Nie znaleziono modelu NEAT. Plansze NEAT użyją agenta losowego.")
+
+    agents_kinds = parse_layout(args.layout, cols)
 
     pygame.init()
     pygame.font.init()
@@ -241,7 +334,7 @@ def main():
     cell_pixel_h = cell_h * cell_size
 
     win_w = cols * cell_pixel_w + (cols + 1) * margin
-    info_h = 40
+    info_h = 58
     win_h = rows * cell_pixel_h + (rows + 1) * margin + info_h
 
     screen = pygame.display.set_mode((win_w, win_h))
@@ -250,31 +343,22 @@ def main():
     font = pygame.font.SysFont(None, 18)
     small_font = pygame.font.SysFont(None, 14)
 
-    zone_kinds = ["food", "qlearning", "dqn"]
-    base = cols // 3
-    rem = cols % 3
-    zone_cols = [base + (1 if i < rem else 0) for i in range(3)]
-    zone_starts = []
-    s = 0
-    for c in zone_cols:
-        zone_starts.append(s)
-        s += c
-
     slots = []
-    for zone_idx, zone_kind in enumerate(zone_kinds):
-        start_col = zone_starts[zone_idx]
-        for c in range(zone_cols[zone_idx]):
-            col = start_col + c
-            for row in range(rows):
-                if zone_kind in ("qlearning", "q", "q-learn", "q-learninfg"):
-                    filename = qtable_file
-                elif zone_kind in ("dqn", "dnn"):
-                    filename = dqn_file
-                else:
-                    filename = None
+    for col, agent_kind in enumerate(agents_kinds):
+        normalized_kind = agent_kind.lower()
 
-                slot = Slot(zone_kind, width=cell_w, height=cell_h, max_steps=args.max_steps, agent_filename=filename)
-                slots.append({"slot": slot, "row": row, "col": col, "zone": zone_idx})
+        for row in range(rows):
+            if normalized_kind in ("qlearning", "q", "q-learn", "q-learninfg"):
+                filename = qtable_file
+            elif normalized_kind in ("dqn", "dnn"):
+                filename = dqn_file
+            elif normalized_kind in ("neat", "neuroevolution", "neuro-ewolucja"):
+                filename = neat_file
+            else:
+                filename = None
+
+            slot = Slot(agent_kind, width=cell_w, height=cell_h, max_steps=args.max_steps, agent_filename=filename)
+            slots.append({"slot": slot, "row": row, "col": col, "zone": col, "kind": normalized_kind})
 
     if len(slots) > 0:
         master_food = slots[0]["slot"].game.food
@@ -325,22 +409,17 @@ def main():
         screen.fill((20, 20, 20))
 
         info_surf = font.render(f"Wiersze: {rows} Kolumny: {cols} FPS: {fps}  Spacja=pauza  R=restart  +/-=szybkość  Q=wyjście", True, (220, 220, 220))
-        screen.blit(info_surf, (10, 8))
+        screen.blit(info_surf, (10, 6))
 
-        for zi in range(3):
-            zc = zone_cols[zi]
-            if zc == 0:
-                continue
-            cs = zone_starts[zi]
-            min_x = margin + cs * (cell_pixel_w + margin)
-            zone_width = zc * cell_pixel_w + (zc - 1) * margin
-            center_x = int(min_x + zone_width / 2)
-            label = DISPLAY_NAMES.get(zone_kinds[zi], zone_kinds[zi].upper())
+        for col, agent_kind in enumerate(agents_kinds):
+            min_x = margin + col * (cell_pixel_w + margin)
+            center_x = int(min_x + cell_pixel_w / 2)
+            label = DISPLAY_NAMES.get(agent_kind, agent_kind.upper())
             label_surf = font.render(label, True, (240, 240, 240))
-            screen.blit(label_surf, (center_x - label_surf.get_width() // 2, 8))
+            screen.blit(label_surf, (center_x - label_surf.get_width() // 2, 30))
 
-            if zi < 2:
-                sep_x = int(min_x + zone_width + margin / 2)
+            if col < cols - 1:
+                sep_x = int(min_x + cell_pixel_w + margin / 2)
                 pygame.draw.line(screen, (68, 68, 68), (sep_x, info_h), (sep_x, win_h - margin), 2)
 
         for entry in slots:
@@ -351,7 +430,7 @@ def main():
             y0 = margin + row * (cell_pixel_h + margin) + info_h
 
             zone = entry.get("zone", 0)
-            bg_colors = [(40, 40, 40), (42, 48, 52), (40, 38, 40)]
+            bg_colors = [(40, 40, 40), (42, 48, 52), (40, 38, 40), (38, 44, 40)]
             pygame.draw.rect(screen, bg_colors[zone % len(bg_colors)], (x0, y0, cell_pixel_w, cell_pixel_h))
 
             for x in range(cell_w):

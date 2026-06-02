@@ -2,18 +2,21 @@ import csv
 from pathlib import Path
 
 from agents.q_learning import QLearningAgent
+from project_paths import Q_LEARNING_HISTORY_FILE, Q_TABLE_FILE
 from rl.environment import SnakeRLEnvironment
 
 
+WIDTH = 10
+HEIGHT = 10
+MAX_STEPS = 1000
 EPISODES = 10000
 TEST_GAMES = 100
-Q_TABLE_FILE = "q_table.pkl"
-TRAINING_HISTORY_FILE = "results/q_learning_training.csv"
+TRAINING_HISTORY_FILE = Q_LEARNING_HISTORY_FILE
 RESET_Q_TABLE = True
 
 
 def train():
-    env = SnakeRLEnvironment(width=10, height=10)
+    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
     agent = QLearningAgent()
     
     if RESET_Q_TABLE:
@@ -61,7 +64,7 @@ def train():
 
 
 def test(agent):
-    env = SnakeRLEnvironment(width=10, height=10)
+    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
     old_epsilon = agent.epsilon
     agent.epsilon = 0
 
