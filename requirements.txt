@@ -1,3 +1,4 @@
 torch
 pygame-ce
 neat-python
+matplotlib

@@ -3,6 +3,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = PROJECT_DIR / "results"
+PLOTS_DIR = RESULTS_DIR / "plots"
 
 Q_TABLE_FILE = PROJECT_DIR / "q_table.pkl"
 DQN_MODEL_FILE = PROJECT_DIR / "dqn_model.pth"

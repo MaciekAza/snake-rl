@@ -40,6 +40,12 @@ Eksperymenty:
 python run_experiments.py
 ```
 
+Wykresy:
+
+```bash
+python plot_results.py
+```
+
 ## Q-learning
 
 Dodany jest pierwszy algorytm RL:
@@ -96,16 +102,32 @@ Ustawienia: plansza `10x10`, limit `1000` kroków, test `100` gier.
 
 | Agent | Średni wynik | Najlepszy wynik | Średnia liczba kroków | Epizody treningu |
 | --- | ---: | ---: | ---: | ---: |
-| losowy | 0.13 | 1 | 13.21 | 0 |
-| heurystyka_jedzenia | 19.50 | 36 | 157.35 | 0 |
-| Q-learning | 14.61 | 27 | 116.49 | 10000 |
-| DQN | 17.82 | 31 | 143.32 | 1500 |
-| NEAT | 24.70 | 37 | 577.77 | 35 pokoleń |
+| losowy | 0.15 | 1 | 14.73 | 0 |
+| heurystyka_jedzenia | 20.90 | 42 | 171.86 | 0 |
+| Q-learning | 14.92 | 26 | 117.88 | 10000 |
+| DQN | 18.12 | 34 | 147.63 | 1500 |
+| NEAT | 25.05 | 37 | 596.04 | 35 pokoleń |
 
 Wyniki eksperymentów są w pliku:
 
 ```text
 results/experiment_results.csv
+```
+
+Wykresy są w katalogu:
+
+```text
+results/plots
+```
+
+Wygenerowane wykresy:
+
+```text
+results/plots/q_learning_training.png
+results/plots/dqn_training.png
+results/plots/neat_training.png
+results/plots/agent_scores.png
+results/plots/agent_steps.png
 ```
 
 Historie treningu są w plikach:
