@@ -5,11 +5,18 @@ from pathlib import Path
 from agents.baseline import FoodAgent, RandomAgent
 from agents.dqn import DQNAgent
 from agents.q_learning import QLearningAgent
-from project_paths import EXPERIMENT_RESULTS_FILE, NEAT_CONFIG_FILE, NEAT_HISTORY_FILE, NEAT_MODEL_FILE
+from project_paths import (
+    DQN_MODEL_FILE,
+    EXPERIMENT_RESULTS_FILE,
+    NEAT_CONFIG_FILE,
+    NEAT_HISTORY_FILE,
+    NEAT_MODEL_FILE,
+    Q_TABLE_FILE,
+)
 from rl.environment import ACTIONS, SnakeRLEnvironment
 from snake_game.game import SnakeGame
-from train_dqn import DQN_MODEL_FILE, EPISODES as DQN_EPISODES
-from train_q_learning import EPISODES as Q_LEARNING_EPISODES, Q_TABLE_FILE
+from training.train_dqn import EPISODES as DQN_EPISODES
+from training.train_q_learning import EPISODES as Q_LEARNING_EPISODES
 
 
 WIDTH = 10
@@ -17,7 +24,7 @@ HEIGHT = 10
 MAX_STEPS = 1000
 TEST_GAMES = 100
 RESULTS_FILE = EXPERIMENT_RESULTS_FILE
-MAX_NEAT_GENERATIONS = 35
+MAX_NEAT_GENERATIONS = 80
 
 
 def evaluate_baseline(agent, training_episodes):
@@ -99,7 +106,7 @@ def load_neat_agent():
         return None
 
     if not Path(NEAT_MODEL_FILE).exists():
-        print("Nie znaleziono modelu NEAT. Najpierw uruchom: python train_neat.py")
+        print("Nie znaleziono modelu NEAT. Najpierw uruchom: python -m training.train_neat")
         return None
 
     if not Path(NEAT_CONFIG_FILE).exists():

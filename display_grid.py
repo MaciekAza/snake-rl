@@ -15,6 +15,9 @@ from agents.q_learning import QLearningAgent
 from project_paths import DQN_MODEL_FILE, NEAT_CONFIG_FILE, NEAT_MODEL_FILE, PROJECT_DIR, Q_TABLE_FILE
 
 
+DEFAULT_DISPLAY_MAX_STEPS = 5000
+
+
 DISPLAY_NAMES = {
     "food": "HEURYSTYKA",
     "heuristic": "HEURYSTYKA",
@@ -282,7 +285,7 @@ def main():
     parser.add_argument("--dqn-file", type=str, default=None, help="ścieżka do pliku modelu DQN (.pth)")
     parser.add_argument("--qtable-file", type=str, default=None, help="ścieżka do pliku tablicy Q-learning (.pkl)")
     parser.add_argument("--neat-file", type=str, default=None, help="ścieżka do pliku modelu NEAT (.pkl)")
-    parser.add_argument("--max-steps", type=int, default=1000)
+    parser.add_argument("--max-steps", type=int, default=DEFAULT_DISPLAY_MAX_STEPS, help="limit kroków jednej gry w wizualizacji")
     args = parser.parse_args()
 
     rows = args.rows

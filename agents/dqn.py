@@ -1,5 +1,6 @@
 import random
 from collections import deque
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -90,13 +91,16 @@ class DQNAgent:
         self.target_model.load_state_dict(self.model.state_dict())
 
     def save(self, filename=DQN_MODEL_FILE):
+        path = Path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
         torch.save(
             {
                 "model": self.model.state_dict(),
                 "target_model": self.target_model.state_dict(),
                 "epsilon": self.epsilon,
             },
-            filename,
+            path,
         )
         print(f"Model DQN zapisany do {filename}")
 

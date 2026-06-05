@@ -1,6 +1,6 @@
 agent,średni_wynik,najlepszy_wynik,średnie_kroki,epizody_treningu,liczba_testów,plansza,limit_kroków
-losowy,0.15,1,14.73,0,100,10x10,1000
-heurystyka_jedzenia,20.90,42,171.86,0,100,10x10,1000
-Q-learning,14.92,26,117.88,10000,100,10x10,1000
-DQN,18.12,34,147.63,1500,100,10x10,1000
-NEAT,25.05,37,596.04,35,100,10x10,1000
+losowy,0.16,2,16.44,0,100,10x10,1000
+heurystyka_jedzenia,20.86,43,173.68,0,100,10x10,1000
+Q-learning,16.17,28,131.70,30000,100,10x10,1000
+DQN,19.30,30,159.52,1500,100,10x10,1000
+NEAT,41.75,51,979.08,80,100,10x10,1000

@@ -16,8 +16,8 @@ from project_paths import (
 
 
 def read_rows(path):
-    with path.open("r", newline="", encoding="utf-8") as file:
-        return list(csv.DictReader(file))
+    text = path.read_text(encoding="utf-8").replace("\x00", "")
+    return list(csv.DictReader(text.splitlines()))
 
 
 def numbers(rows, column, cast=float):

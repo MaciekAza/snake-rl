@@ -1,5 +1,10 @@
 import csv
+import sys
 from pathlib import Path
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
 
 from agents.q_learning import QLearningAgent
 from project_paths import Q_LEARNING_HISTORY_FILE, Q_TABLE_FILE
@@ -9,32 +14,75 @@ from rl.environment import SnakeRLEnvironment
 WIDTH = 10
 HEIGHT = 10
 MAX_STEPS = 1000
-EPISODES = 10000
+EPISODES = 30000
 TEST_GAMES = 100
 TRAINING_HISTORY_FILE = Q_LEARNING_HISTORY_FILE
-RESET_Q_TABLE = True
+RESET_Q_TABLE = False
+FIELDNAMES = ["epizod", "wynik", "kroki", "epsilon", "rozmiar_tablicy_q"]
+
+
+def load_last_training_state(history_path):
+    if not history_path.exists():
+        return 0, None
+
+    last_row = None
+
+    with history_path.open("r", newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+
+        for row in reader:
+            last_row = row
+
+    if last_row is None:
+        return 0, None
+
+    try:
+        episode = int(last_row["epizod"])
+    except (KeyError, ValueError):
+        episode = 0
+
+    try:
+        epsilon = float(last_row["epsilon"])
+    except (KeyError, ValueError):
+        epsilon = None
+
+    return episode, epsilon
 
 
 def train():
     env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
     agent = QLearningAgent()
+    history_path = Path(TRAINING_HISTORY_FILE)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    start_episode = 0
     
     if RESET_Q_TABLE:
         print("Start od pustej Q-table")
     else:
-        agent.load(Q_TABLE_FILE)
+        loaded = agent.load(Q_TABLE_FILE)
 
-    history_path = Path(TRAINING_HISTORY_FILE)
-    history_path.parent.mkdir(parents=True, exist_ok=True)
+        if loaded:
+            start_episode, saved_epsilon = load_last_training_state(history_path)
 
-    with history_path.open("w", newline="", encoding="utf-8") as file:
+            if saved_epsilon is not None:
+                agent.epsilon = max(agent.epsilon_min, saved_epsilon)
+
+            print(f"Kontynuacja treningu od epizodu {start_episode}")
+        else:
+            print("Nie znaleziono Q-table, start od pustej tablicy")
+
+    file_mode = "a" if start_episode > 0 and not RESET_Q_TABLE else "w"
+
+    with history_path.open(file_mode, newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=["epizod", "wynik", "kroki", "epsilon", "rozmiar_tablicy_q"],
+            fieldnames=FIELDNAMES,
         )
-        writer.writeheader()
 
-        for episode in range(EPISODES):
+        if file_mode == "w":
+            writer.writeheader()
+
+        for episode in range(start_episode, EPISODES):
             state = env.reset()
 
             while not env.game.game_over:

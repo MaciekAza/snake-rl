@@ -1,6 +1,7 @@
 import random
 import pickle
 import os
+from pathlib import Path
 
 from project_paths import Q_TABLE_FILE
 from rl.environment import ACTIONS
@@ -63,7 +64,10 @@ class QLearningAgent:
             self.epsilon = self.epsilon_min
 
     def save(self, filename=Q_TABLE_FILE):
-        with open(filename, 'wb') as f:
+        path = Path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with path.open('wb') as f:
             pickle.dump(self.q_table, f)
         print(f"Tablica Q zapisana do {filename}")
 

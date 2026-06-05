@@ -19,19 +19,19 @@ python baseline_demo.py
 Q-learning:
 
 ```bash
-python train_q_learning.py
+python -m training.train_q_learning
 ```
 
 DQN:
 
 ```bash
-python train_dqn.py
+python -m training.train_dqn
 ```
 
 NEAT:
 
 ```bash
-python train_neat.py
+python -m training.train_neat
 ```
 
 Eksperymenty:
@@ -52,9 +52,9 @@ Dodany jest pierwszy algorytm RL:
 
 - tablica Q,
 - epsilon-greedy,
-- trening przez 10000 epizodów,
+- trening przez 30000 epizodów,
 - trening od pustej Q-table,
-- zapis Q-table do `q_table.pkl`,
+- zapis Q-table do `models/q_table.pkl`,
 - zapis historii treningu do `results/q_learning_training.csv`.
 
 ## DQN
@@ -67,7 +67,7 @@ Dodany jest prosty Deep Q-Network:
 - target network,
 - epsilon-greedy,
 - trening przez 1500 epizodów,
-- zapis modelu do `dqn_model.pth`,
+- zapis modelu do `models/dqn_model.pth`,
 - zapis historii treningu do `results/dqn_training.csv`.
 
 ## NEAT
@@ -79,8 +79,9 @@ Dodana jest neuroewolucja:
 - populacja genomów,
 - selekcja najlepszego osobnika,
 - osobna funkcja sprawności z karą za stagnację i pętle,
-- trening przez 35 pokoleń,
-- zapis najlepszego genomu do `neat_winner.pkl`,
+- trening przez 80 pokoleń,
+- checkpointy do wznawiania długiego treningu,
+- zapis najlepszego genomu do `models/neat_winner.pkl`,
 - zapis historii treningu do `results/neat_training.csv`.
 
 ## Nagrody
@@ -102,11 +103,11 @@ Ustawienia: plansza `10x10`, limit `1000` kroków, test `100` gier.
 
 | Agent | Średni wynik | Najlepszy wynik | Średnia liczba kroków | Epizody treningu |
 | --- | ---: | ---: | ---: | ---: |
-| losowy | 0.15 | 1 | 14.73 | 0 |
-| heurystyka_jedzenia | 20.90 | 42 | 171.86 | 0 |
-| Q-learning | 14.92 | 26 | 117.88 | 10000 |
-| DQN | 18.12 | 34 | 147.63 | 1500 |
-| NEAT | 25.05 | 37 | 596.04 | 35 pokoleń |
+| losowy | 0.16 | 2 | 16.14 | 0 |
+| heurystyka_jedzenia | 20.03 | 38 | 163.98 | 0 |
+| Q-learning | 16.58 | 30 | 130.45 | 30000 |
+| DQN | 18.62 | 36 | 152.52 | 1500 |
+| NEAT | 41.20 | 55 | 968.26 | 80 pokoleń |
 
 Wyniki eksperymentów są w pliku:
 
@@ -141,9 +142,27 @@ results/neat_training.csv
 Aktualne modele używane przez skrypty:
 
 ```text
-q_table.pkl
-dqn_model.pth
-neat_winner.pkl
+models/q_table.pkl
+models/dqn_model.pth
+models/neat_winner.pkl
+```
+
+Konfiguracja NEAT:
+
+```text
+config/neat_config.txt
+```
+
+Checkpointy NEAT:
+
+```text
+checkpoints
+```
+
+Wymagania z PDF:
+
+```text
+docs/projekty2025-26-letni.pdf
 ```
 
 Wspólne ścieżki do tych plików są w `project_paths.py`.
