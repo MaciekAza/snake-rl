@@ -140,18 +140,10 @@ class SnakeGame:
         return position not in body
 
     def safe_directions(self):
-        safe = []
-
-        for direction in DIRECTIONS:
-            if self.is_safe_direction(direction):
-                safe.append(direction)
-
-        return safe
+        return [direction for direction in DIRECTIONS if self.is_safe_direction(direction)]
 
     def render_text(self):
-        board = []
-        for _ in range(self.height):
-            board.append([" " for _ in range(self.width)])
+        board = [[" "] * self.width for _ in range(self.height)]
 
         food_x, food_y = self.food
         board[food_y][food_x] = "*"
@@ -163,11 +155,7 @@ class SnakeGame:
         board[head_y][head_x] = "@"
 
         border = "#" * (self.width + 2)
-        lines = [border]
-        for row in board:
-            lines.append("#" + "".join(row) + "#")
-        lines.append(border)
-
+        lines = [border, *("#" + "".join(row) + "#" for row in board), border]
         return "\n".join(lines)
 
     def is_wall_collision(self, position):
@@ -175,11 +163,11 @@ class SnakeGame:
         return x < 0 or x >= self.width or y < 0 or y >= self.height
 
     def spawn_food(self):
-        free_places = []
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if (x, y) not in self.snake:
-                    free_places.append((x, y))
-
+        snake = set(self.snake)
+        free_places = [
+            (x, y)
+            for y in range(self.height)
+            for x in range(self.width)
+            if (x, y) not in snake
+        ]
         return self.random.choice(free_places)

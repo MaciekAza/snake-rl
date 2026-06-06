@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 from project_paths import NEAT_CONFIG_FILE, NEAT_MODEL_FILE
 from rl.environment import ACTIONS
@@ -19,22 +20,21 @@ def count_free_neighbors_after_move(env, position):
     if position in blocked:
         return 0
 
-    free = 0
-
-    for neighbor in (
+    neighbors = (
         (position[0] + 1, position[1]),
         (position[0] - 1, position[1]),
         (position[0], position[1] + 1),
         (position[0], position[1] - 1),
-    ):
-        if game.is_wall_collision(neighbor):
-            continue
-        if neighbor in blocked:
-            continue
+    )
+    return sum(
+        not game.is_wall_collision(neighbor) and neighbor not in blocked
+        for neighbor in neighbors
+    )
 
-        free += 1
 
-    return free
+def choose_best_action(outputs, allowed_indexes):
+    indexes = allowed_indexes or range(len(ACTIONS))
+    return ACTIONS[max(indexes, key=lambda index: outputs[index])]
 
 
 def build_neat_inputs(env):
@@ -90,38 +90,29 @@ def build_neat_inputs(env):
 
 
 class NEATAgent:
+    name = "NEAT"
+
     def __init__(self, network):
         self.network = network
-        self.name = "NEAT"
         self.input_size = len(getattr(network, "input_nodes", [])) or NEAT_INPUT_SIZE
 
     def choose_action(self, state):
-        inputs = list(float(value) for value in state)
+        inputs = [float(value) for value in state]
 
         if len(inputs) < self.input_size:
             inputs.extend([0.0] * (self.input_size - len(inputs)))
-        elif len(inputs) > self.input_size:
+        else:
             inputs = inputs[:self.input_size]
 
         outputs = self.network.activate(tuple(inputs))
         safe_indexes = [index for index, danger in enumerate(state[:len(ACTIONS)]) if not danger]
-
-        if len(safe_indexes) == 0:
-            safe_indexes = list(range(len(ACTIONS)))
-
-        best_index = max(safe_indexes, key=lambda index: outputs[index])
-        return ACTIONS[best_index]
+        return choose_best_action(outputs, safe_indexes)
 
     def choose_action_from_env(self, env):
         inputs = build_neat_inputs(env)
         outputs = self.network.activate(inputs)
         safe_indexes = [index for index, action in enumerate(ACTIONS) if not env.is_danger(action)]
-
-        if len(safe_indexes) == 0:
-            safe_indexes = list(range(len(ACTIONS)))
-
-        best_index = max(safe_indexes, key=lambda index: outputs[index])
-        return ACTIONS[best_index]
+        return choose_best_action(outputs, safe_indexes)
 
     @classmethod
     def from_genome(cls, genome, config):
@@ -142,7 +133,7 @@ class NEATAgent:
             str(config_file),
         )
 
-        with open(model_file, "rb") as file:
+        with Path(model_file).open("rb") as file:
             genome = pickle.load(file)
 
         print(f"Model NEAT wczytany z {model_file}")

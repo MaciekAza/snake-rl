@@ -1,6 +1,5 @@
-import random
 import pickle
-import os
+import random
 from pathlib import Path
 
 from project_paths import Q_TABLE_FILE
@@ -24,13 +23,7 @@ class QLearningAgent:
 
     def best_action(self, state):
         values = self.get_values(state)
-        best = ACTIONS[0]
-
-        for action in ACTIONS:
-            if values[action] > values[best]:
-                best = action
-
-        return best
+        return max(ACTIONS, key=values.get)
 
     def learn(self, state, action, reward, next_state, game_over):
         values = self.get_values(state)
@@ -49,32 +42,28 @@ class QLearningAgent:
         values[action] = new_value
 
     def get_values(self, state):
-        if state not in self.q_table:
-            self.q_table[state] = {}
-
-            for action in ACTIONS:
-                self.q_table[state][action] = 0
-
-        return self.q_table[state]
+        return self.q_table.setdefault(state, {action: 0 for action in ACTIONS})
 
     def lower_epsilon(self):
-        self.epsilon = self.epsilon * self.epsilon_decay
-
-        if self.epsilon < self.epsilon_min:
-            self.epsilon = self.epsilon_min
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
     def save(self, filename=Q_TABLE_FILE):
         path = Path(filename)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        with path.open('wb') as f:
-            pickle.dump(self.q_table, f)
+        with path.open("wb") as file:
+            pickle.dump(self.q_table, file)
+
         print(f"Tablica Q zapisana do {filename}")
 
     def load(self, filename=Q_TABLE_FILE):
-        if os.path.exists(filename):
-            with open(filename, 'rb') as f:
-                self.q_table = pickle.load(f)
-            print(f"Tablica Q wczytana z {filename}")
-            return True
-        return False
+        path = Path(filename)
+
+        if not path.exists():
+            return False
+
+        with path.open("rb") as file:
+            self.q_table = pickle.load(file)
+
+        print(f"Tablica Q wczytana z {filename}")
+        return True

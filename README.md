@@ -4,16 +4,16 @@ Prosty projekt: agent gra w Snake'a.
 
 ## Uruchamianie
 
-Gra manualna:
-
-```bash
-python main.py
-```
-
 Agenci bazowi:
 
 ```bash
 python baseline_demo.py
+```
+
+Porównanie agentów w oknie:
+
+```bash
+python display_grid.py
 ```
 
 Q-learning:
@@ -53,7 +53,7 @@ Dodany jest pierwszy algorytm RL:
 - tablica Q,
 - epsilon-greedy,
 - trening przez 30000 epizodów,
-- trening od pustej Q-table,
+- możliwość kontynuacji zapisanej Q-table,
 - zapis Q-table do `models/q_table.pkl`,
 - zapis historii treningu do `results/q_learning_training.csv`.
 
@@ -166,3 +166,4 @@ docs/projekty2025-26-letni.pdf
 ```
 
 Wspólne ścieżki do tych plików są w `project_paths.py`.
+Wspólne ustawienia planszy, testów i liczby epizodów są w `settings.py`.

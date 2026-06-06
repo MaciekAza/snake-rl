@@ -1,3 +1,5 @@
+from collections import deque
+
 from snake_game.game import DOWN, LEFT, RIGHT, UP, SnakeGame
 
 
@@ -180,10 +182,10 @@ class SnakeRLEnvironment:
             return 0
 
         visited = {position}
-        queue = [position]
+        queue = deque([position])
 
-        while len(queue) > 0:
-            x, y = queue.pop(0)
+        while queue:
+            x, y = queue.popleft()
 
             for next_x, next_y in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                 next_position = (next_x, next_y)

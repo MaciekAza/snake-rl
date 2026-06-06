@@ -1,22 +1,13 @@
 import csv
-import sys
 from pathlib import Path
-
-PROJECT_DIR = Path(__file__).resolve().parents[1]
-if str(PROJECT_DIR) not in sys.path:
-    sys.path.insert(0, str(PROJECT_DIR))
 
 from agents.q_learning import QLearningAgent
 from project_paths import Q_LEARNING_HISTORY_FILE, Q_TABLE_FILE
+from rl.evaluation import evaluate_rl, print_evaluation
 from rl.environment import SnakeRLEnvironment
+from settings import BOARD_HEIGHT, BOARD_WIDTH, MAX_STEPS, Q_LEARNING_EPISODES, TEST_GAMES
 
 
-WIDTH = 10
-HEIGHT = 10
-MAX_STEPS = 1000
-EPISODES = 30000
-TEST_GAMES = 100
-TRAINING_HISTORY_FILE = Q_LEARNING_HISTORY_FILE
 RESET_Q_TABLE = False
 FIELDNAMES = ["epizod", "wynik", "kroki", "epsilon", "rozmiar_tablicy_q"]
 
@@ -50,12 +41,12 @@ def load_last_training_state(history_path):
 
 
 def train():
-    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
+    env = SnakeRLEnvironment(width=BOARD_WIDTH, height=BOARD_HEIGHT, max_steps=MAX_STEPS)
     agent = QLearningAgent()
-    history_path = Path(TRAINING_HISTORY_FILE)
+    history_path = Path(Q_LEARNING_HISTORY_FILE)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     start_episode = 0
-    
+
     if RESET_Q_TABLE:
         print("Start od pustej Q-table")
     else:
@@ -82,7 +73,7 @@ def train():
         if file_mode == "w":
             writer.writeheader()
 
-        for episode in range(start_episode, EPISODES):
+        for episode in range(start_episode, Q_LEARNING_EPISODES):
             state = env.reset()
 
             while not env.game.game_over:
@@ -104,46 +95,27 @@ def train():
             )
 
             if (episode + 1) % 500 == 0:
-                print(f"epizod {episode + 1}/{EPISODES}, epsilon {agent.epsilon:.4f}, rozmiar tablicy Q: {len(agent.q_table)}")
+                print(
+                    f"epizod {episode + 1}/{Q_LEARNING_EPISODES}, "
+                    f"epsilon {agent.epsilon:.4f}, "
+                    f"rozmiar tablicy Q: {len(agent.q_table)}"
+                )
 
     agent.save(Q_TABLE_FILE)
-    print(f"Historia treningu zapisana do {TRAINING_HISTORY_FILE}")
+    print(f"Historia treningu zapisana do {Q_LEARNING_HISTORY_FILE}")
     return agent
 
 
 def test(agent):
-    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
-    old_epsilon = agent.epsilon
-    agent.epsilon = 0
-
-    scores = []
-    steps = []
-
-    for _ in range(TEST_GAMES):
-        state = env.reset()
-
-        while not env.game.game_over:
-            action = agent.choose_action(state)
-            state, reward, game_over = env.step(action)
-
-        scores.append(env.game.score)
-        steps.append(env.game.steps)
-
-    agent.epsilon = old_epsilon
-
-    avg_score = sum(scores) / len(scores)
-    avg_steps = sum(steps) / len(steps)
-    
-    print()
-    print("=" * 50)
-    print("Test Q-learning")
-    print("=" * 50)
-    print(f"  średni wynik: {avg_score:.2f}")
-    print(f"  najlepszy wynik: {max(scores)}")
-    print(f"  najgorszy wynik: {min(scores)}")
-    print(f"  średnia liczba kroków: {avg_steps:.2f}")
-    print(f"  liczba testów: {TEST_GAMES}")
-    print("=" * 50)
+    metrics = evaluate_rl(
+        agent,
+        games=TEST_GAMES,
+        width=BOARD_WIDTH,
+        height=BOARD_HEIGHT,
+        max_steps=MAX_STEPS,
+    )
+    print_evaluation("Test Q-learning", metrics)
+    return metrics
 
 
 def main():

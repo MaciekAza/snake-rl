@@ -1,11 +1,7 @@
 import csv
 import pickle
-import sys
 from pathlib import Path
-
-PROJECT_DIR = Path(__file__).resolve().parents[1]
-if str(PROJECT_DIR) not in sys.path:
-    sys.path.insert(0, str(PROJECT_DIR))
+from statistics import fmean
 
 try:
     import neat
@@ -13,24 +9,27 @@ except ModuleNotFoundError:
     print("Brakuje biblioteki neat-python. Uruchom: pip install -r requirements.txt")
     raise SystemExit(1)
 
-from agents.neat_agent import NEATAgent
-from agents.neat_agent import build_neat_inputs
+from agents.neat_agent import NEATAgent, build_neat_inputs, choose_best_action
 from project_paths import NEAT_CHECKPOINT_PREFIX, NEAT_CONFIG_FILE, NEAT_HISTORY_FILE, NEAT_MODEL_FILE
+from rl.evaluation import evaluate_rl, print_evaluation
 from rl.environment import ACTIONS, SnakeRLEnvironment
+from settings import BOARD_HEIGHT, BOARD_WIDTH, MAX_STEPS, NEAT_GENERATIONS, TEST_GAMES
 
 
-WIDTH = 10
-HEIGHT = 10
-MAX_STEPS = 1000
-GENERATIONS = 80
 EVALUATION_SEEDS = (101, 202, 303, 404, 505)
-GAMES_PER_GENOME = len(EVALUATION_SEEDS)
 MAX_STEPS_WITHOUT_FOOD = 80
-TEST_GAMES = 100
-CONFIG_FILE = NEAT_CONFIG_FILE
-TRAINING_HISTORY_FILE = NEAT_HISTORY_FILE
 CHECKPOINT_EVERY_GENERATIONS = 5
 RESUME_FROM_CHECKPOINT = True
+HISTORY_FIELDS = [
+    "pokolenie",
+    "najlepsza_sprawność",
+    "średnia_sprawność",
+    "średni_wynik_najlepszego",
+    "średni_wynik_populacji",
+    "najlepszy_wynik_najlepszego",
+    "średnie_kroki_najlepszego",
+    "liczba_genomów",
+]
 
 
 def make_config():
@@ -39,7 +38,7 @@ def make_config():
         neat.DefaultReproduction,
         neat.DefaultSpeciesSet,
         neat.DefaultStagnation,
-        str(CONFIG_FILE),
+        str(NEAT_CONFIG_FILE),
     )
 
 
@@ -110,17 +109,17 @@ def trim_history_to_generation(history_path, generation):
 def choose_action(network, env):
     outputs = network.activate(build_neat_inputs(env))
     safe_indexes = [index for index, action in enumerate(ACTIONS) if not env.is_danger(action)]
-
-    if len(safe_indexes) == 0:
-        safe_indexes = list(range(len(ACTIONS)))
-
-    best_index = max(safe_indexes, key=lambda index: outputs[index])
-    return ACTIONS[best_index]
+    return choose_best_action(outputs, safe_indexes)
 
 
 def play_game(network, seed=None):
-    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS, seed=seed)
-    state = env.reset()
+    env = SnakeRLEnvironment(
+        width=BOARD_WIDTH,
+        height=BOARD_HEIGHT,
+        max_steps=MAX_STEPS,
+        seed=seed,
+    )
+    env.reset()
     fitness = 0
     steps_without_food = 0
     visited_states = {}
@@ -129,7 +128,7 @@ def play_game(network, seed=None):
         old_score = env.game.score
         old_distance = env._calculate_food_distance()
         action = choose_action(network, env)
-        state, reward, game_over = env.step(action)
+        env.step(action)
         new_distance = env._calculate_food_distance()
 
         if env.game.score > old_score:
@@ -183,9 +182,9 @@ def evaluate_genome(genome, config):
         steps.append(step_count)
         fitness_values.append(fitness_value)
 
-    avg_score = sum(scores) / len(scores)
-    avg_steps = sum(steps) / len(steps)
-    fitness = sum(fitness_values) / len(fitness_values)
+    avg_score = fmean(scores)
+    avg_steps = fmean(steps)
+    fitness = fmean(fitness_values)
 
     genome.fitness = fitness
     genome.avg_score = avg_score
@@ -209,30 +208,21 @@ def train():
         )
     )
 
-    history_path = Path(TRAINING_HISTORY_FILE)
+    history_path = Path(NEAT_HISTORY_FILE)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     trim_history_to_generation(history_path, start_generation)
     file_mode = "a" if start_generation > 0 and history_path.exists() else "w"
     generation = {"number": start_generation}
-    generations_to_run = max(0, GENERATIONS - start_generation)
+    generations_to_run = max(0, NEAT_GENERATIONS - start_generation)
 
     if generations_to_run == 0:
-        print(f"NEAT ma juĹĽ {start_generation} pokoleĹ„, nie trzeba trenowaÄ‡ dalej.")
+        print(f"NEAT ma już {start_generation} pokoleń, nie trzeba trenować dalej.")
         return NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
 
     with history_path.open(file_mode, newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=[
-                "pokolenie",
-                "najlepsza_sprawność",
-                "średnia_sprawność",
-                "średni_wynik_najlepszego",
-                "średni_wynik_populacji",
-                "najlepszy_wynik_najlepszego",
-                "średnie_kroki_najlepszego",
-                "liczba_genomów",
-            ],
+            fieldnames=HISTORY_FIELDS,
         )
         if file_mode == "w":
             writer.writeheader()
@@ -245,8 +235,8 @@ def train():
 
             scored_genomes = [genome for genome_id, genome in genomes]
             best = max(scored_genomes, key=lambda genome: genome.fitness)
-            avg_fitness = sum(genome.fitness for genome in scored_genomes) / len(scored_genomes)
-            avg_score = sum(genome.avg_score for genome in scored_genomes) / len(scored_genomes)
+            avg_fitness = fmean(genome.fitness for genome in scored_genomes)
+            avg_score = fmean(genome.avg_score for genome in scored_genomes)
 
             writer.writerow(
                 {
@@ -263,7 +253,7 @@ def train():
             file.flush()
 
             print(
-                f"pokolenie {generation['number']}/{GENERATIONS}, "
+                f"pokolenie {generation['number']}/{NEAT_GENERATIONS}, "
                 f"najlepsza sprawność {best.fitness:.2f}, "
                 f"średni wynik najlepszego {best.avg_score:.2f}"
             )
@@ -277,49 +267,21 @@ def train():
         pickle.dump(winner, file)
 
     print(f"Model NEAT zapisany do {NEAT_MODEL_FILE}")
-    print(f"Historia treningu zapisana do {TRAINING_HISTORY_FILE}")
+    print(f"Historia treningu zapisana do {NEAT_HISTORY_FILE}")
 
     return NEATAgent.from_genome(winner, config)
 
 
 def test(agent):
-    env = SnakeRLEnvironment(width=WIDTH, height=HEIGHT, max_steps=MAX_STEPS)
-    scores = []
-    steps = []
-
-    for _ in range(TEST_GAMES):
-        state = env.reset()
-
-        while not env.game.game_over:
-            if hasattr(agent, "choose_action_from_env"):
-                action = agent.choose_action_from_env(env)
-            else:
-                action = agent.choose_action(state)
-            state, reward, game_over = env.step(action)
-
-        scores.append(env.game.score)
-        steps.append(env.game.steps)
-
-    avg_score = sum(scores) / len(scores)
-    avg_steps = sum(steps) / len(steps)
-
-    print()
-    print("=" * 50)
-    print("Test NEAT")
-    print("=" * 50)
-    print(f"  średni wynik: {avg_score:.2f}")
-    print(f"  najlepszy wynik: {max(scores)}")
-    print(f"  najgorszy wynik: {min(scores)}")
-    print(f"  średnia liczba kroków: {avg_steps:.2f}")
-    print(f"  liczba testów: {TEST_GAMES}")
-    print("=" * 50)
-
-    return {
-        "avg_score": avg_score,
-        "best_score": max(scores),
-        "avg_steps": avg_steps,
-        "test_games": TEST_GAMES,
-    }
+    metrics = evaluate_rl(
+        agent,
+        games=TEST_GAMES,
+        width=BOARD_WIDTH,
+        height=BOARD_HEIGHT,
+        max_steps=MAX_STEPS,
+    )
+    print_evaluation("Test NEAT", metrics)
+    return metrics
 
 
 def main():
