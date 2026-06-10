@@ -6,18 +6,18 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import pygame
 
-from agents.baseline import FoodAgent, RandomAgent
-from agents.q_learning import QLearningAgent
-from project_paths import (
+from project.agents.baseline import FoodAgent, RandomAgent
+from project.agents.q_learning import QLearningAgent
+from project.environment import ACTIONS, SnakeRLEnvironment
+from project.evaluation import choose_rl_action
+from project.game import SnakeGame
+from project.paths import (
     DQN_MODEL_FILE,
     NEAT_CONFIG_FILE,
     NEAT_MODEL_FILE,
     Q_TABLE_FILE,
 )
-from rl.evaluation import choose_rl_action
-from rl.environment import ACTIONS, SnakeRLEnvironment
-from settings import BOARD_HEIGHT, BOARD_WIDTH, DISPLAY_MAX_STEPS
-from snake_game.game import SnakeGame
+from project.settings import BOARD_HEIGHT, BOARD_WIDTH, DISPLAY_MAX_STEPS
 
 
 Q_KINDS = {"qlearning", "q", "q-learn"}
@@ -119,7 +119,7 @@ class Slot:
             return
 
         try:
-            from agents.dqn import DQNAgent
+            from project.agents.dqn import DQNAgent
 
             agent = DQNAgent(state_size=len(state), action_size=len(ACTIONS))
             agent.load(DQN_MODEL_FILE)
@@ -139,7 +139,7 @@ class Slot:
             return
 
         try:
-            from agents.neat_agent import NEATAgent
+            from project.agents.neat_agent import NEATAgent
 
             self.agent = NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
         except Exception as error:

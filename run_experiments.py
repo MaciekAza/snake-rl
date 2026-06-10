@@ -1,10 +1,12 @@
 import csv
 import importlib.util
 
-from agents.baseline import FoodAgent, RandomAgent
-from agents.dqn import DQNAgent
-from agents.q_learning import QLearningAgent
-from project_paths import (
+from project.agents.baseline import FoodAgent, RandomAgent
+from project.agents.dqn import DQNAgent
+from project.agents.q_learning import QLearningAgent
+from project.environment import ACTIONS, SnakeRLEnvironment
+from project.evaluation import evaluate_baseline, evaluate_rl
+from project.paths import (
     DQN_MODEL_FILE,
     EXPERIMENT_RESULTS_FILE,
     NEAT_CONFIG_FILE,
@@ -12,9 +14,7 @@ from project_paths import (
     NEAT_MODEL_FILE,
     Q_TABLE_FILE,
 )
-from rl.evaluation import evaluate_baseline, evaluate_rl
-from rl.environment import ACTIONS, SnakeRLEnvironment
-from settings import (
+from project.settings import (
     BOARD_HEIGHT,
     BOARD_WIDTH,
     DQN_EPISODES,
@@ -82,14 +82,14 @@ def load_neat_agent():
         return None
 
     if not NEAT_MODEL_FILE.exists():
-        print("Nie znaleziono modelu NEAT. Najpierw uruchom: python -m training.train_neat")
+        print("Nie znaleziono modelu NEAT. Najpierw uruchom: python -m project.training.train_neat")
         return None
 
     if not NEAT_CONFIG_FILE.exists():
         print("Nie znaleziono konfiguracji NEAT.")
         return None
 
-    from agents.neat_agent import NEATAgent
+    from project.agents.neat_agent import NEATAgent
 
     return NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
 

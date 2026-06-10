@@ -6,13 +6,21 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 
-from project_paths import (
+from project.paths import (
     DQN_HISTORY_FILE,
     EXPERIMENT_RESULTS_FILE,
     NEAT_HISTORY_FILE,
     PLOTS_DIR,
     Q_LEARNING_HISTORY_FILE,
 )
+
+AGENT_LABELS = {
+    "losowy": "Losowy",
+    "heurystyka_jedzenia": "Heurystyka",
+    "Q-learning": "Q-learning",
+    "DQN": "DQN",
+    "NEAT": "NEAT",
+}
 
 
 def read_rows(path):
@@ -133,7 +141,7 @@ def plot_neat():
 
 def plot_agent_scores():
     rows = read_rows(EXPERIMENT_RESULTS_FILE)
-    agents = [row["agent"] for row in rows]
+    agents = [AGENT_LABELS.get(row["agent"], row["agent"]) for row in rows]
     average_scores = numbers(rows, "średni_wynik")
     best_scores = numbers(rows, "najlepszy_wynik", int)
     indexes = range(len(agents))
@@ -154,7 +162,7 @@ def plot_agent_scores():
 
 def plot_agent_steps():
     rows = read_rows(EXPERIMENT_RESULTS_FILE)
-    agents = [row["agent"] for row in rows]
+    agents = [AGENT_LABELS.get(row["agent"], row["agent"]) for row in rows]
     steps = numbers(rows, "średnie_kroki")
 
     plt.figure(figsize=(10, 5))
