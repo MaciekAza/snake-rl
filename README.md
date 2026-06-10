@@ -22,7 +22,6 @@ Najważniejsze pliki podczas prezentacji:
 - `run_experiments.py` - porównanie wyników,
 - `plot_results.py` - generowanie wykresów.
 
-Całe zaplecze projektu znajduje się w jednym katalogu `project/`.
 
 Trening lub kontynuacja modeli:
 
@@ -34,7 +33,7 @@ python -m project.training.train_neat
 
 ## Wyniki
 
-Plansza `10x10`, limit `1000` kroków, po `100` gier testowych.
+Plansza `10x10`, po `100` gier testowych. Test nie ma limitu kroków i trwa do końca gry.
 
 | Agent | Średni wynik | Najlepszy wynik | Średnie kroki |
 | --- | ---: | ---: | ---: |
@@ -42,6 +41,6 @@ Plansza `10x10`, limit `1000` kroków, po `100` gier testowych.
 | heurystyka | 20,65 | 41 | 169,81 |
 | Q-learning | 16,86 | 31 | 139,29 |
 | DQN | 17,97 | 34 | 141,60 |
-| NEAT | 40,41 | 50 | 964,92 |
+| NEAT | 59,40 | 97 | 1531,47 |
 
-Pełny opis eksperymentów, wykresy i wnioski znajdują się w [RAPORT.md](RAPORT.md).
+Wynik `97` oznacza zapełnienie całej planszy: wąż zaczyna z długością 3, więc na planszy mającej 100 pól może zjeść maksymalnie 97 pokarmów.

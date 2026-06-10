@@ -126,7 +126,6 @@ def test(agent):
         games=TEST_GAMES,
         width=BOARD_WIDTH,
         height=BOARD_HEIGHT,
-        max_steps=MAX_STEPS,
     )
     print_evaluation("Test Q-learning", metrics)
     return metrics

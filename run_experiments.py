@@ -18,7 +18,6 @@ from project.settings import (
     BOARD_HEIGHT,
     BOARD_WIDTH,
     DQN_EPISODES,
-    MAX_STEPS,
     NEAT_GENERATIONS,
     Q_LEARNING_EPISODES,
     TEST_GAMES,
@@ -33,7 +32,6 @@ RESULT_FIELDS = [
     "epizody_treningu",
     "liczba_testów",
     "plansza",
-    "limit_kroków",
 ]
 
 
@@ -46,7 +44,6 @@ def make_result(name, metrics, training_episodes):
         "epizody_treningu": training_episodes,
         "liczba_testów": metrics["games"],
         "plansza": f"{BOARD_WIDTH}x{BOARD_HEIGHT}",
-        "limit_kroków": MAX_STEPS,
     }
 
 
@@ -57,7 +54,6 @@ def evaluate_agent(name, agent, training_episodes, rl_agent):
         games=TEST_GAMES,
         width=BOARD_WIDTH,
         height=BOARD_HEIGHT,
-        max_steps=MAX_STEPS,
     )
     return make_result(name, metrics, training_episodes)
 
@@ -69,7 +65,7 @@ def load_q_learning_agent():
 
 
 def load_dqn_agent():
-    env = SnakeRLEnvironment(width=BOARD_WIDTH, height=BOARD_HEIGHT, max_steps=MAX_STEPS)
+    env = SnakeRLEnvironment(width=BOARD_WIDTH, height=BOARD_HEIGHT, max_steps=None)
     state_size = len(env.reset())
     agent = DQNAgent(state_size=state_size, action_size=len(ACTIONS))
     agent.load(DQN_MODEL_FILE)

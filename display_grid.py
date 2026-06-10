@@ -17,7 +17,7 @@ from project.paths import (
     NEAT_MODEL_FILE,
     Q_TABLE_FILE,
 )
-from project.settings import BOARD_HEIGHT, BOARD_WIDTH, DISPLAY_MAX_STEPS
+from project.settings import BOARD_HEIGHT, BOARD_WIDTH
 
 
 Q_KINDS = {"qlearning", "q", "q-learn"}
@@ -326,8 +326,8 @@ def build_parser():
     parser.add_argument(
         "--max-steps",
         type=int,
-        default=DISPLAY_MAX_STEPS,
-        help="limit kroków jednej gry w wizualizacji",
+        default=None,
+        help="opcjonalny limit kroków; domyślnie gra bez limitu",
     )
     return parser
 

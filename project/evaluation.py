@@ -16,7 +16,7 @@ def summarize(scores, steps):
     }
 
 
-def evaluate_baseline(agent, games, width, height, max_steps):
+def evaluate_baseline(agent, games, width, height):
     random.seed(RANDOM_SEED)
     scores = []
     steps = []
@@ -24,7 +24,7 @@ def evaluate_baseline(agent, games, width, height, max_steps):
     for game_number in range(games):
         game = SnakeGame(width=width, height=height, seed=game_number)
 
-        while not game.game_over and game.steps < max_steps:
+        while not game.game_over:
             game.step(agent.choose_direction(game))
 
         scores.append(game.score)
@@ -40,9 +40,9 @@ def choose_rl_action(agent, env, state):
     return agent.choose_action(state)
 
 
-def evaluate_rl(agent, games, width, height, max_steps):
+def evaluate_rl(agent, games, width, height):
     random.seed(RANDOM_SEED)
-    env = SnakeRLEnvironment(width=width, height=height, max_steps=max_steps)
+    env = SnakeRLEnvironment(width=width, height=height, max_steps=None)
     saved_epsilon = getattr(agent, "epsilon", None)
 
     if saved_epsilon is not None:

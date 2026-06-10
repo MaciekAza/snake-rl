@@ -73,7 +73,11 @@ class SnakeRLEnvironment:
         else:
             self.steps_without_food += 1
 
-        if self.game.steps >= self.max_steps and not self.game.game_over:
+        if (
+            self.max_steps is not None
+            and self.game.steps >= self.max_steps
+            and not self.game.game_over
+        ):
             self.game.game_over = True
             self.game.reason = "limit"
             reward = self.step_limit_penalty
