@@ -32,9 +32,8 @@ def count_free_neighbors_after_move(env, position):
     )
 
 
-def choose_best_action(outputs, allowed_indexes):
-    indexes = allowed_indexes or range(len(ACTIONS))
-    return ACTIONS[max(indexes, key=lambda index: outputs[index])]
+def choose_best_action(outputs):
+    return ACTIONS[max(range(len(ACTIONS)), key=lambda index: outputs[index])]
 
 
 def build_neat_inputs(env):
@@ -105,14 +104,12 @@ class NEATAgent:
             inputs = inputs[:self.input_size]
 
         outputs = self.network.activate(tuple(inputs))
-        safe_indexes = [index for index, danger in enumerate(state[:len(ACTIONS)]) if not danger]
-        return choose_best_action(outputs, safe_indexes)
+        return choose_best_action(outputs)
 
     def choose_action_from_env(self, env):
         inputs = build_neat_inputs(env)
         outputs = self.network.activate(inputs)
-        safe_indexes = [index for index, action in enumerate(ACTIONS) if not env.is_danger(action)]
-        return choose_best_action(outputs, safe_indexes)
+        return choose_best_action(outputs)
 
     @classmethod
     def from_genome(cls, genome, config):

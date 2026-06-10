@@ -42,6 +42,6 @@ Plansza `10x10`, limit `1000` kroków, po `100` gier testowych.
 | heurystyka | 20,65 | 41 | 169,81 |
 | Q-learning | 16,86 | 31 | 139,29 |
 | DQN | 17,97 | 34 | 141,60 |
-| NEAT | 38,69 | 54 | 936,99 |
+| NEAT | 40,41 | 50 | 964,92 |
 
 Pełny opis eksperymentów, wykresy i wnioski znajdują się w [RAPORT.md](RAPORT.md).

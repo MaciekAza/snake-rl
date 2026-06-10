@@ -118,11 +118,25 @@ def plot_neat():
     generations = numbers(rows, "pokolenie", int)
     best_score = numbers(rows, "średni_wynik_najlepszego")
     population_score = numbers(rows, "średni_wynik_populacji")
+    validation_score = numbers(rows, "średni_wynik_walidacyjny")
+    best_validation_score = []
+    validation_maximum = float("-inf")
+
+    for score in validation_score:
+        validation_maximum = max(validation_maximum, score)
+        best_validation_score.append(validation_maximum)
     best_fitness = numbers(rows, "najlepsza_sprawność")
 
     fig, axis_score = plt.subplots(figsize=(10, 5))
     axis_score.plot(generations, best_score, color="#9467bd", linewidth=2.4, marker="o", label="średni wynik najlepszego")
     axis_score.plot(generations, population_score, color="#8c564b", linewidth=1.8, label="średni wynik populacji")
+    axis_score.plot(
+        generations,
+        best_validation_score,
+        color="#2ca02c",
+        linewidth=2,
+        label="najlepszy wynik walidacyjny",
+    )
     axis_score.set_title("NEAT - trening")
     axis_score.set_xlabel("Pokolenie")
     axis_score.set_ylabel("Wynik")

@@ -78,18 +78,20 @@ DQN zastępuje tablicę Q siecią neuronową napisaną w PyTorch. Sieć ma dwie 
 
 ### 4.5. NEAT
 
-NEAT tworzy populację sieci neuronowych i wybiera z niej najlepsze. W kolejnych pokoleniach zmienia ich połączenia i wagi. Każda sieć była oceniana w pięciu grach. Ocena uwzględniała wynik, zbliżanie się do jedzenia, długość przeżycia i unikanie zapętlenia.
+NEAT tworzy populację sieci neuronowych i wybiera z niej najlepsze. W kolejnych pokoleniach zmienia ich połączenia i wagi. Każda sieć była oceniana na sześciu stałych i czterech zmiennych układach planszy. Pięciu najlepszych kandydatów z każdego pokolenia sprawdzano dodatkowo na osobnym zestawie 20 gier walidacyjnych. Do modelu zapisywano tylko sieć, która poprawiła wynik walidacyjny.
 
 | Parametr | Wartość |
 | --- | ---: |
-| pokolenia | 80 |
-| liczebność populacji | 100 |
-| gry oceniające sieć | 5 |
+| pokolenia | 60 |
+| liczebność populacji | 200 |
+| gry oceniające sieć | 10 |
+| gry walidacyjne | 20 |
 | wejścia sieci | 30 |
+| początkowe neurony ukryte | 8 |
 | wyjścia sieci | 3 |
-| zapis stanu treningu | co 5 pokoleń |
+| zapis stanu treningu | co 10 pokoleń |
 
-NEAT otrzymuje więcej informacji o planszy niż Q-learning i DQN. Pomija również ruchy prowadzące bezpośrednio do kolizji. Należy o tym pamiętać podczas porównywania wyników.
+Q-learning, DQN i NEAT otrzymują informację, czy każdy z trzech ruchów prowadzi bezpośrednio do kolizji. Żaden z tych algorytmów nie ma jednak zablokowanego niebezpiecznego ruchu - każdy musi sam nauczyć się go unikać.
 
 ## 5. Metodyka eksperymentu
 
@@ -110,7 +112,7 @@ Wszystkie modele zostały przetrenowane od zera przed wykonaniem końcowego por�
 | --- | ---: | ---: | ---: | ---: |
 | Q-learning | 30 000 epizodów | 38 | 0,57 | 15,48 |
 | DQN | 1 500 epizodów | 36 | 0,26 | 15,90 |
-| NEAT | 80 pokoleń | 44 | 1,40 | 41,80 |
+| NEAT | 60 pokoleń | 51 | 0,50 | 40,50 |
 
 Dla Q-learningu porównano średnie z pierwszych i ostatnich `1000` epizodów, dla DQN z pierwszych i ostatnich `100`, a dla NEAT wynik najlepszej sieci.
 
@@ -130,7 +132,7 @@ DQN potrzebował mniej epizodów niż Q-learning. Ostatnie 100 epizodów było d
 
 ![Przebieg treningu NEAT](project/data/results/plots/neat_training.png)
 
-NEAT poprawiał się skokowo. Największa poprawa nastąpiła w 60. pokoleniu, gdy średni wynik najlepszej sieci wzrósł z `25,60` do `41,80`. Wynik całej populacji zmieniał się między pokoleniami, ale pod koniec był znacznie lepszy niż na początku.
+NEAT poprawił średni wynik najlepszego osobnika z `0,50` do `40,50`. Największy skok nastąpił w 56. pokoleniu. Najlepszy wynik walidacyjny wyniósł `41,00`, a średni wynik populacji wzrósł z `0,06` do `9,08`. Zmieniane układy treningowe i osobna walidacja ograniczyły zapamiętywanie kilku plansz.
 
 ## 7. Wyniki końcowe
 
@@ -140,7 +142,7 @@ NEAT poprawiał się skokowo. Największa poprawa nastąpiła w 60. pokoleniu, g
 | heurystyka | 20,65 | 41 | 169,81 | 0 |
 | Q-learning | 16,86 | 31 | 139,29 | 30 000 epizodów |
 | DQN | 17,97 | 34 | 141,60 | 1 500 epizodów |
-| NEAT | 38,69 | 54 | 936,99 | 80 pokoleń |
+| NEAT | 40,41 | 50 | 964,92 | 60 pokoleń |
 
 ![Porównanie wyników agentów](project/data/results/plots/agent_scores.png)
 
@@ -148,32 +150,31 @@ NEAT poprawiał się skokowo. Największa poprawa nastąpiła w 60. pokoleniu, g
 
 ## 8. Analiza wyników
 
-NEAT uzyskał najwyższy średni i najlepszy wynik. Osiągał też znacznie większą liczbę kroków, często grając blisko limitu. Korzystał jednak z większej liczby informacji o planszy i odrzucał ruchy prowadzące bezpośrednio do kolizji.
-
-Agent heurystyczny zajął drugie miejsce. Pokazuje to, że prosta wiedza o problemie może być bardzo skuteczna i stanowi wymagający punkt odniesienia dla metod uczonych.
+NEAT uzyskał najwyższy średni wynik. Osiągnął `40,41`, czyli prawie dwa razy więcej niż agent heurystyczny. Najgorsza z jego 100 gier zakończyła się wynikiem 22, co pokazuje, że wyuczona strategia była również stabilna.
 
 DQN osiągnął wynik nieco lepszy od Q-learningu mimo znacznie krótszego treningu. Nie udało mu się jednak pokonać prostej heurystyki.
 
 Q-learning nauczył się grać znacznie lepiej od agenta losowego, ale musi zapamiętywać wiele sytuacji osobno w tablicy Q.
 
-Agent losowy prawie zawsze szybko przegrywał. Spełnił rolę dolnej granicy jakości.
+NEAT pokonał pozostałe metody bez automatycznego blokowania ruchów prowadzących do kolizji. Największą poprawę dały bardziej zróżnicowane plansze treningowe, większa populacja, warstwa ukryta oraz wybieranie końcowego modelu według osobnej walidacji.
+
+Agent losowy prawie zawsze szybko przegrywał i spełnił rolę dolnej granicy jakości.
 
 ## 9. Wnioski
 
-1. NEAT był najlepszym rozwiązaniem w zastosowanej konfiguracji i osiągnął średni wynik `38,69`.
-2. Heurystyka była bardzo mocnym punktem odniesienia i pokonała oba badane algorytmy RL.
+1. NEAT był najmocniejszym agentem i osiągnął średni wynik `40,41`.
+2. DQN osiągnął trochę lepszy wynik od Q-learningu mimo znacznie krótszego treningu.
 3. Q-learning działa, ale tablica Q ogranicza jego możliwości.
-4. DQN osiągnął trochę lepszy wynik od Q-learningu, lecz wymaga dłuższego treningu.
-5. Wynik zależy również od informacji przekazywanych agentowi i sposobu przyznawania nagród.
-6. Pełne 80 pokoleń NEAT było potrzebne, ponieważ największa poprawa pojawiła się dopiero w 60. pokoleniu.
+4. NEAT nauczył się samodzielnie unikać kolizji i wyraźnie pokonał heurystykę.
+5. Wszystkie uczone algorytmy widzą informację o bezpośrednim zagrożeniu, ale samodzielnie wybierają ruch.
+6. Zmieniane plansze treningowe i osobna walidacja były kluczowe dla dobrej generalizacji NEAT.
 
 ## 10. Ograniczenia i dalszy rozwój
 
-- wykonać kilka niezależnych treningów i porównać ich wyniki,
+- wykonać kilka niezależnych treningów każdego algorytmu i porównać ich stabilność,
 - przekazać wszystkim uczonym agentom taki sam zestaw informacji,
 - sprawdzić większe plansze i inne limity kroków,
-- dłużej trenować DQN,
-- zakończyć grę, gdy agent przez długi czas nie zdobywa punktów.
+- dłużej trenować DQN.
 
 ## 11. Uruchomienie i prezentacja
 

@@ -1,6 +1,9 @@
 import csv
+import copy
+import os
 import pickle
 import random
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from statistics import fmean
 
@@ -24,10 +27,23 @@ from project.settings import (
 )
 
 
-EVALUATION_SEEDS = (101, 202, 303, 404, 505)
-MAX_STEPS_WITHOUT_FOOD = 80
-CHECKPOINT_EVERY_GENERATIONS = 5
+ANCHOR_SEEDS = (1001, 1002, 1003, 1004, 1005, 1006)
+VALIDATION_SEEDS = tuple(range(3001, 3021))
+ROTATING_SEEDS_PER_GENERATION = 4
+VALIDATION_CANDIDATES = 5
+WORKERS = max(1, min(8, (os.cpu_count() or 2) - 1))
+MAX_STEPS_WITHOUT_FOOD = 120
+CHECKPOINT_EVERY_GENERATIONS = 10
 RESUME_FROM_CHECKPOINT = True
+SAFE_MOVE_REWARD = 0.2
+CLOSER_TO_FOOD_REWARD = 1.0
+FARTHER_FROM_FOOD_PENALTY = 1.2
+FOOD_REWARD = 1000
+DANGEROUS_ACTION_PENALTY = 500
+COLLISION_PENALTY = 500
+STAGNATION_PENALTY = 200
+NO_FOOD_PENALTY = 100
+LOOP_PENALTY = 2
 HISTORY_FIELDS = [
     "pokolenie",
     "najlepsza_sprawność",
@@ -36,6 +52,8 @@ HISTORY_FIELDS = [
     "średni_wynik_populacji",
     "najlepszy_wynik_najlepszego",
     "średnie_kroki_najlepszego",
+    "średni_wynik_walidacyjny",
+    "najlepszy_wynik_walidacyjny",
     "liczba_genomów",
 ]
 
@@ -116,8 +134,13 @@ def trim_history_to_generation(history_path, generation):
 
 def choose_action(network, env):
     outputs = network.activate(build_neat_inputs(env))
-    safe_indexes = [index for index, action in enumerate(ACTIONS) if not env.is_danger(action)]
-    return choose_best_action(outputs, safe_indexes)
+    return choose_best_action(outputs)
+
+
+def training_seeds(generation):
+    randomizer = random.Random(RANDOM_SEED + generation)
+    rotating = randomizer.sample(range(2000, 3000), ROTATING_SEEDS_PER_GENERATION)
+    return ANCHOR_SEEDS + tuple(rotating)
 
 
 def play_game(network, seed=None):
@@ -136,55 +159,58 @@ def play_game(network, seed=None):
         old_score = env.game.score
         old_distance = env._calculate_food_distance()
         action = choose_action(network, env)
+        dangerous_action = env.is_danger(action)
+
+        if dangerous_action:
+            fitness -= DANGEROUS_ACTION_PENALTY
+
         env.step(action)
         new_distance = env._calculate_food_distance()
 
         if env.game.score > old_score:
             steps_without_food = 0
-            fitness += 1200 + env.game.score * 300
+            fitness += FOOD_REWARD + env.game.score * 100
         else:
             steps_without_food += 1
 
             if new_distance < old_distance:
-                fitness += 8
+                fitness += CLOSER_TO_FOOD_REWARD
             elif new_distance > old_distance:
-                fitness -= 6
-            else:
-                fitness -= 1
+                fitness -= FARTHER_FROM_FOOD_PENALTY
+
+        if not dangerous_action:
+            fitness += SAFE_MOVE_REWARD
 
         head = env.game.snake[0]
         state_key = (head, env.game.food, env.game.direction, env.game.score)
         visited_states[state_key] = visited_states.get(state_key, 0) + 1
 
         if visited_states[state_key] > 2:
-            fitness -= visited_states[state_key] * 4
+            fitness -= (visited_states[state_key] - 2) * LOOP_PENALTY
 
         if steps_without_food > MAX_STEPS_WITHOUT_FOOD:
-            fitness -= 400
+            fitness -= STAGNATION_PENALTY
             env.game.game_over = True
             env.game.reason = "stagnacja"
 
-    fitness += env.game.score * 2500 + env.game.score * env.game.score * 900
-    fitness -= steps_without_food * 1.2
+    fitness += env.game.score * env.game.score * 500
 
     if env.game.score == 0:
-        fitness -= 600
+        fitness -= NO_FOOD_PENALTY
 
     if env.game.reason in ("wall", "body"):
-        fitness -= 250
-    elif env.game.reason in ("limit", "stagnacja"):
-        fitness -= 300
+        fitness -= COLLISION_PENALTY
 
     return env.game.score, env.game.steps, fitness
 
 
-def evaluate_genome(genome, config):
+def evaluate_genome_on_seeds(genome, config, seeds):
     network = neat.nn.FeedForwardNetwork.create(genome, config)
     scores = []
     steps = []
     fitness_values = []
 
-    for seed in EVALUATION_SEEDS:
+    for seed in seeds:
         score, step_count, fitness_value = play_game(network, seed)
         scores.append(score)
         steps.append(step_count)
@@ -192,14 +218,52 @@ def evaluate_genome(genome, config):
 
     avg_score = fmean(scores)
     avg_steps = fmean(steps)
-    fitness = fmean(fitness_values)
+    fitness = (
+        avg_score * 100000
+        + min(scores) * 25000
+        + max(scores) * 1000
+        + fmean(fitness_values)
+    )
 
-    genome.fitness = fitness
-    genome.avg_score = avg_score
-    genome.best_score = max(scores)
-    genome.avg_steps = avg_steps
+    return {
+        "fitness": fitness,
+        "avg_score": avg_score,
+        "best_score": max(scores),
+        "worst_score": min(scores),
+        "avg_steps": avg_steps,
+    }
 
-    return fitness
+
+def apply_metrics(genome, metrics):
+    genome.fitness = metrics["fitness"]
+    genome.avg_score = metrics["avg_score"]
+    genome.best_score = metrics["best_score"]
+    genome.worst_score = metrics["worst_score"]
+    genome.avg_steps = metrics["avg_steps"]
+
+
+def validation_key(metrics):
+    return (
+        metrics["avg_score"],
+        metrics["worst_score"],
+        metrics["best_score"],
+        metrics["fitness"],
+    )
+
+
+def load_saved_validation(config):
+    model_path = Path(NEAT_MODEL_FILE)
+
+    if not model_path.exists():
+        return None
+
+    try:
+        with model_path.open("rb") as file:
+            genome = pickle.load(file)
+
+        return evaluate_genome_on_seeds(genome, config, VALIDATION_SEEDS)
+    except (OSError, pickle.UnpicklingError, RuntimeError, ValueError):
+        return None
 
 
 def train():
@@ -223,12 +287,16 @@ def train():
     file_mode = "a" if start_generation > 0 and history_path.exists() else "w"
     generation = {"number": start_generation}
     generations_to_run = max(0, NEAT_GENERATIONS - start_generation)
+    best_validation = {"metrics": load_saved_validation(config)}
 
     if generations_to_run == 0:
         print(f"NEAT ma już {start_generation} pokoleń, nie trzeba trenować dalej.")
         return NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
 
-    with history_path.open(file_mode, newline="", encoding="utf-8") as file:
+    with (
+        history_path.open(file_mode, newline="", encoding="utf-8") as file,
+        ProcessPoolExecutor(max_workers=WORKERS) as executor,
+    ):
         writer = csv.DictWriter(
             file,
             fieldnames=HISTORY_FIELDS,
@@ -238,14 +306,64 @@ def train():
 
         def eval_genomes(genomes, neat_config):
             generation["number"] += 1
+            seeds = training_seeds(generation["number"])
+            futures = [
+                (
+                    genome,
+                    executor.submit(
+                        evaluate_genome_on_seeds,
+                        genome,
+                        neat_config,
+                        seeds,
+                    ),
+                )
+                for genome_id, genome in genomes
+            ]
 
-            for genome_id, genome in genomes:
-                evaluate_genome(genome, neat_config)
+            for genome, future in futures:
+                apply_metrics(genome, future.result())
 
             scored_genomes = [genome for genome_id, genome in genomes]
             best = max(scored_genomes, key=lambda genome: genome.fitness)
             avg_fitness = fmean(genome.fitness for genome in scored_genomes)
             avg_score = fmean(genome.avg_score for genome in scored_genomes)
+            candidates = sorted(
+                scored_genomes,
+                key=lambda genome: genome.fitness,
+                reverse=True,
+            )[:VALIDATION_CANDIDATES]
+            validation_futures = [
+                (
+                    candidate,
+                    executor.submit(
+                        evaluate_genome_on_seeds,
+                        candidate,
+                        neat_config,
+                        VALIDATION_SEEDS,
+                    ),
+                )
+                for candidate in candidates
+            ]
+            validated = [
+                (candidate, future.result())
+                for candidate, future in validation_futures
+            ]
+            validation_genome, validation_metrics = max(
+                validated,
+                key=lambda item: validation_key(item[1]),
+            )
+
+            if (
+                best_validation["metrics"] is None
+                or validation_key(validation_metrics)
+                > validation_key(best_validation["metrics"])
+            ):
+                best_validation["metrics"] = validation_metrics
+                model_path = Path(NEAT_MODEL_FILE)
+                model_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with model_path.open("wb") as model_file:
+                    pickle.dump(copy.deepcopy(validation_genome), model_file)
 
             writer.writerow(
                 {
@@ -256,6 +374,8 @@ def train():
                     "średni_wynik_populacji": f"{avg_score:.2f}",
                     "najlepszy_wynik_najlepszego": best.best_score,
                     "średnie_kroki_najlepszego": f"{best.avg_steps:.2f}",
+                    "średni_wynik_walidacyjny": f"{validation_metrics['avg_score']:.2f}",
+                    "najlepszy_wynik_walidacyjny": validation_metrics["best_score"],
                     "liczba_genomów": len(scored_genomes),
                 }
             )
@@ -264,7 +384,8 @@ def train():
             print(
                 f"pokolenie {generation['number']}/{NEAT_GENERATIONS}, "
                 f"najlepsza sprawność {best.fitness:.2f}, "
-                f"średni wynik najlepszego {best.avg_score:.2f}"
+                f"średni wynik najlepszego {best.avg_score:.2f}, "
+                f"walidacja {validation_metrics['avg_score']:.2f}"
             )
 
         winner = population.run(eval_genomes, generations_to_run)
@@ -272,13 +393,14 @@ def train():
     model_path = Path(NEAT_MODEL_FILE)
     model_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with model_path.open("wb") as file:
-        pickle.dump(winner, file)
+    if not model_path.exists():
+        with model_path.open("wb") as file:
+            pickle.dump(winner, file)
 
     print(f"Model NEAT zapisany do {NEAT_MODEL_FILE}")
     print(f"Historia treningu zapisana do {NEAT_HISTORY_FILE}")
 
-    return NEATAgent.from_genome(winner, config)
+    return NEATAgent.load(NEAT_MODEL_FILE, NEAT_CONFIG_FILE)
 
 
 def test(agent):

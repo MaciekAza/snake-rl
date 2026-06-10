@@ -24,7 +24,7 @@ OPPOSITE = {
 
 
 class SnakeGame:
-    def __init__(self, width=20, height=12, seed=None):
+    def __init__(self, width=10, height=10, seed=None):
         if width < 5 or height < 5:
             raise ValueError("Plansza musi miec co najmniej 5x5 pol.")
 
