@@ -21,6 +21,9 @@ class QLearningAgent:
 
         return self.best_action(state)
 
+    def choose_action_from_env(self, env):
+        return self.choose_action(env.get_q_state())
+
     def best_action(self, state):
         values = self.get_values(state)
         return max(ACTIONS, key=values.get)

@@ -204,7 +204,77 @@ class SnakeRLEnvironment:
 
         return len(visited)
 
+    def _count_free_neighbors_after_move(self, position):
+        if self.game.is_wall_collision(position):
+            return 0
+
+        eating = position == self.game.food
+        blocked = set(self.game.snake if eating else self.game.snake[:-1])
+
+        if position in blocked:
+            return 0
+
+        x, y = position
+        neighbors = (
+            (x + 1, y),
+            (x - 1, y),
+            (x, y + 1),
+            (x, y - 1),
+        )
+        return sum(
+            not self.game.is_wall_collision(neighbor) and neighbor not in blocked
+            for neighbor in neighbors
+        )
+
     def get_state(self):
+        head_x, head_y = self.game.snake[0]
+        food_x, food_y = self.game.food
+        board_area = self.game.width * self.game.height
+        max_distance = self.game.width + self.game.height
+        current_distance = self._calculate_food_distance()
+        state = []
+
+        for action in ACTIONS:
+            direction = self.action_to_direction(action)
+            next_position = self.game.next_position(direction)
+            next_x, next_y = next_position
+            next_distance = abs(next_x - food_x) + abs(next_y - food_y)
+            body_distance = self._get_body_distance_from_position(next_position)
+
+            if body_distance == float("inf"):
+                body_distance = max_distance
+
+            state.extend(
+                [
+                    self.is_danger(action),
+                    (current_distance - next_distance) / max_distance,
+                    self._get_wall_distance_from_position(next_position)
+                    / max(self.game.width, self.game.height),
+                    min(body_distance, max_distance) / max_distance,
+                    self._count_free_neighbors_after_move(next_position) / 4,
+                    int(next_position == self.game.food),
+                ]
+            )
+
+        state.extend(
+            [
+                int(self.game.direction == UP),
+                int(self.game.direction == RIGHT),
+                int(self.game.direction == DOWN),
+                int(self.game.direction == LEFT),
+                (food_x - head_x) / max(1, self.game.width - 1),
+                (food_y - head_y) / max(1, self.game.height - 1),
+                int(food_x < head_x),
+                int(food_x > head_x),
+                int(food_y < head_y),
+                int(food_y > head_y),
+                len(self.game.snake) / board_area,
+                current_distance / max_distance,
+            ]
+        )
+        return tuple(state)
+
+    def get_q_state(self):
         head_x, head_y = self.game.snake[0]
         food_x, food_y = self.game.food
 

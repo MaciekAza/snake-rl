@@ -16,6 +16,18 @@ def summarize(scores, steps):
     }
 
 
+def stop_repeating_game(game, visited_states):
+    state = (tuple(game.snake), game.food, game.direction, game.score)
+
+    if state in visited_states:
+        game.game_over = True
+        game.reason = "loop"
+        return True
+
+    visited_states.add(state)
+    return False
+
+
 def evaluate_baseline(agent, games, width, height):
     random.seed(RANDOM_SEED)
     scores = []
@@ -23,8 +35,12 @@ def evaluate_baseline(agent, games, width, height):
 
     for game_number in range(games):
         game = SnakeGame(width=width, height=height, seed=game_number)
+        visited_states = set()
 
         while not game.game_over:
+            if getattr(agent, "name", None) != "losowy":
+                if stop_repeating_game(game, visited_states):
+                    break
             game.step(agent.choose_direction(game))
 
         scores.append(game.score)
@@ -55,8 +71,11 @@ def evaluate_rl(agent, games, width, height):
         for game_number in range(games):
             env.game.random.seed(game_number)
             state = env.reset()
+            visited_states = set()
 
             while not env.game.game_over:
+                if stop_repeating_game(env.game, visited_states):
+                    break
                 action = choose_rl_action(agent, env, state)
                 state, _, _ = env.step(action)
 

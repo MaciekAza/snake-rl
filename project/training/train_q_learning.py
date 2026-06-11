@@ -57,6 +57,8 @@ def train():
         seed=RANDOM_SEED,
     )
     agent = QLearningAgent()
+    env.reset()
+    state_size = len(env.get_q_state())
     history_path = Path(Q_LEARNING_HISTORY_FILE)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     start_episode = 0
@@ -67,12 +69,21 @@ def train():
         loaded = agent.load(Q_TABLE_FILE)
 
         if loaded:
-            start_episode, saved_epsilon = load_last_training_state(history_path)
+            saved_state = next(iter(agent.q_table), None)
 
-            if saved_epsilon is not None:
-                agent.epsilon = max(agent.epsilon_min, saved_epsilon)
+            if saved_state is not None and len(saved_state) != state_size:
+                print(
+                    "Zapisana Q-table używa innego opisu stanu. "
+                    "Rozpoczynam trening od pustej tablicy."
+                )
+                agent = QLearningAgent()
+            else:
+                start_episode, saved_epsilon = load_last_training_state(history_path)
 
-            print(f"Kontynuacja treningu od epizodu {start_episode}")
+                if saved_epsilon is not None:
+                    agent.epsilon = max(agent.epsilon_min, saved_epsilon)
+
+                print(f"Kontynuacja treningu od epizodu {start_episode}")
         else:
             print("Nie znaleziono Q-table, start od pustej tablicy")
 
@@ -88,11 +99,13 @@ def train():
             writer.writeheader()
 
         for episode in range(start_episode, Q_LEARNING_EPISODES):
-            state = env.reset()
+            env.reset()
+            state = env.get_q_state()
 
             while not env.game.game_over:
                 action = agent.choose_action(state)
-                next_state, reward, game_over = env.step(action)
+                _, reward, game_over = env.step(action)
+                next_state = env.get_q_state()
                 agent.learn(state, action, reward, next_state, game_over)
                 state = next_state
 
